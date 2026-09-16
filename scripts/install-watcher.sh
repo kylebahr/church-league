@@ -25,6 +25,19 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOG="$HOME/Library/Logs/church-league.log"
 
+# Default to the repo's own inbox/. That folder is deliberately NOT under
+# ~/Downloads, ~/Documents or ~/Desktop: macOS guards those three and denies a
+# launchd agent access to them silently, with no prompt.
+WATCH_DIR="$REPO/inbox"
+ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --watch) WATCH_DIR="$2"; shift 2 ;;
+    *) ARGS+=("$1"); shift ;;
+  esac
+done
+set -- "${ARGS[@]+"${ARGS[@]}"}"
+
 case "${1:-install}" in
   --status)
     if is_loaded; then
@@ -60,7 +73,7 @@ case "${1:-install}" in
     ;;
 esac
 
-mkdir -p "$HOME/Library/LaunchAgents" "$(dirname "$LOG")"
+mkdir -p "$HOME/Library/LaunchAgents" "$(dirname "$LOG")" "$WATCH_DIR/processed"
 
 # Capture the node that works in YOUR shell and pin it into the agent. Do not
 # let launchd's bare PATH pick one: /usr/local/bin/node on this machine is
@@ -90,10 +103,10 @@ cat > "$PLIST" <<PLIST_EOF
     <string>$REPO/scripts/watch-ingest.sh</string>
   </array>
 
-  <!-- Fires whenever ~/Downloads changes. The script exits immediately when
-       the change is not a DraftKings contest export. -->
+  <!-- Fires whenever the drop folder changes. The script exits immediately
+       when the change is not a DraftKings contest export. -->
   <key>WatchPaths</key>
-  <array><string>$HOME/Downloads</string></array>
+  <array><string>$WATCH_DIR</string></array>
 
   <!-- Also sweep hourly, so a download that landed while the agent was not
        running (Mac asleep, just-rebooted) still gets picked up. -->
@@ -102,6 +115,7 @@ cat > "$PLIST" <<PLIST_EOF
   <key>EnvironmentVariables</key>
   <dict>
     <key>CL_NODE</key><string>$NODE_BIN</string>
+    <key>CL_WATCH_DIR</key><string>$WATCH_DIR</string>
   </dict>
 
   <key>StandardOutPath</key><string>$LOG</string>
@@ -131,11 +145,12 @@ fi
 
 echo "Watcher installed and registered with launchd."
 echo
-echo "  watches : $HOME/Downloads for contest-standings-*.csv"
+echo "  watches : $WATCH_DIR for contest-standings-*.csv"
 echo "  runs    : $REPO/ingest.sh --unattended"
 echo "  log     : $LOG"
 echo
-echo "Your weekly job is now: click \"Export Lineups to CSV\" on the DK contest page."
+echo "Your weekly job is now: save the DK export into"
+echo "  $WATCH_DIR"
 echo "Everything after that - scoring, site, deploy, league email - is automatic."
 echo
 echo "  ./scripts/install-watcher.sh --status     check on it"

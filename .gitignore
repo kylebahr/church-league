@@ -1,6 +1,9 @@
 # Email addresses never belong in git. Local only; CI uses the LEAGUE_EMAILS secret.
 data/emails.json
 
+# Download drop point for the watcher
+inbox/
+
 # Generated
 site/
 out/

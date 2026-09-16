@@ -196,10 +196,15 @@ page. `scripts/install-watcher.sh` installs a launchd agent that watches `~/Down
 `./ingest.sh --unattended` the moment a contest export lands.
 
 ```bash
-./scripts/install-watcher.sh              # install
+./scripts/install-watcher.sh              # install (watches ./inbox)
 ./scripts/install-watcher.sh --status     # is it working?
 ./scripts/install-watcher.sh --uninstall  # remove
+./scripts/install-watcher.sh --watch DIR  # watch somewhere else
 ```
+
+Save the DK export into **`inbox/`** and everything else happens on its own. Once ingested, the
+file is filed into `inbox/processed/`, so whatever is sitting loose in `inbox/` is whatever has
+not been handled yet.
 
 Unattended mode is deliberately paranoid, because a false positive would both score wrong data
 and email 17 people:
@@ -210,17 +215,15 @@ and email 17 people:
 4. at least 70% of the roster must appear in the export, or it is ignored
 5. it will never overwrite a week that is already ingested
 
-### macOS will block this until you choose one of three things
+### Why this repo lives at `~/church-league` and not under `~/Documents`
 
-A launchd agent gets no access to `~/Downloads` or `~/Documents`, and macOS denies it *silently* —
-it appears in the log only as `Operation not permitted`. `--status` detects this and says so.
+macOS guards exactly three folders — **Desktop, Documents and Downloads**. A launchd agent gets no
+access to them and is denied *silently*: the only symptom is `Operation not permitted` in the log.
+The agent looked healthy and did nothing.
 
-1. **Grant Full Disk Access to `/bin/bash`** (System Settings → Privacy & Security). One checkbox,
-   but it is a broad grant to every script on the machine. Understand the tradeoff.
-2. **Move out of the protected folders.** Put the repo somewhere like `~/church-league` and point
-   Chrome's download folder at `~/church-league/inbox`. No permission needed at all — TCC only
-   guards Desktop, Documents and Downloads.
-3. **Skip the watcher** and keep running `./ingest.sh` yourself. It is one command.
+Rather than grant Full Disk Access to `/bin/bash` — a broad permission covering every script on the
+machine — the repo and its drop folder sit outside all three, where no permission is required at
+all. `--status` still detects a TCC denial and explains it, in case this ever moves back.
 
 ### Why the download itself is not automated
 

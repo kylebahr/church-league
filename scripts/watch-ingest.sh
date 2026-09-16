@@ -18,7 +18,7 @@
 set -uo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-WATCH="${CL_WATCH_DIR:-$HOME/Downloads}"
+WATCH="${CL_WATCH_DIR:-$REPO/inbox}"
 LOG="$HOME/Library/Logs/church-league.log"
 LOCKDIR="/tmp/church-league-ingest.lock.d"
 
@@ -112,6 +112,11 @@ printf '%s\n' "$out" >> "$LOG"
 case $rc in
   0)
     week="$(printf '%s' "$out" | sed -n 's/.*Committed week \([0-9]*\).*/\1/p' | tail -1)"
+    # File the export away so the drop folder shows only what is pending.
+    if mkdir -p "$WATCH/processed" 2>/dev/null; then
+      mv "$CAND" "$WATCH/processed/$(basename "$CAND")" 2>/dev/null \
+        && log "filed: processed/$(basename "$CAND")"
+    fi
     log "OK: ingested${week:+ week $week}"
     notify "Week ${week:-?} ingested. Site is deploying and the league email is on its way."
     ;;
