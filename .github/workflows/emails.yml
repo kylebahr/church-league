@@ -11,12 +11,21 @@ name: League emails
 # The Tuesday standings cron is only a BACKSTOP. The standings email is
 # normally sent by deploy.yml the moment a week's CSV is ingested, whatever
 # time that happens - see that workflow. --once keeps the two from doubling up.
+# GitHub's scheduler is best-effort: ticks run late under load and are
+# sometimes dropped outright (one was dropped on 2026-09-16 because this file
+# had been edited four minutes earlier). So every send has a retry 35 minutes
+# later that maps to the SAME slot. --once is keyed by slot, so the retry is a
+# no-op when the first one worked and a rescue when it did not.
 on:
   schedule:
-    - cron: '0 14 * * 2'   # Tue  9am CDT - results backstop
-    - cron: '0 22 * * 3'   # Wed  5pm CDT - reminder 1, lock is tomorrow
-    - cron: '0 14 * * 4'   # Thu  9am CDT - reminder 2, lock is tonight
-    - cron: '0 22 * * 4'   # Thu  5pm CDT - reminder 3, last call ~2h out
+    - cron: '0 14 * * 2'    # Tue  9:00am CDT - results backstop
+    - cron: '35 14 * * 2'   #      9:35am     - retry
+    - cron: '0 22 * * 3'    # Wed  5:00pm CDT - reminder 1, lock is tomorrow
+    - cron: '35 22 * * 3'   #      5:35pm     - retry
+    - cron: '0 14 * * 4'    # Thu  9:00am CDT - reminder 2, lock is tonight
+    - cron: '35 14 * * 4'   #      9:35am     - retry
+    - cron: '0 22 * * 4'    # Thu  5:00pm CDT - reminder 3, last call ~2h out
+    - cron: '35 22 * * 4'   #      5:35pm     - retry, still ~1h40m before lock
   workflow_dispatch:
     inputs:
       kind:
@@ -55,17 +64,18 @@ jobs:
             echo "to=${{ inputs.to }}"     >> "$GITHUB_OUTPUT"
           else
             echo "dry=false" >> "$GITHUB_OUTPUT"
+            # Each pair maps to one slot, so the retry cannot double-send.
             case "${{ github.event.schedule }}" in
-              "0 14 * * 2") echo "kind=standings" >> "$GITHUB_OUTPUT"
-                            echo "slot=tue-am"    >> "$GITHUB_OUTPUT" ;;
-              "0 22 * * 3") echo "kind=reminder"  >> "$GITHUB_OUTPUT"
-                            echo "slot=wed-pm"    >> "$GITHUB_OUTPUT" ;;
-              "0 14 * * 4") echo "kind=reminder"  >> "$GITHUB_OUTPUT"
-                            echo "slot=thu-am"    >> "$GITHUB_OUTPUT" ;;
-              "0 22 * * 4") echo "kind=reminder"  >> "$GITHUB_OUTPUT"
-                            echo "slot=thu-pm"    >> "$GITHUB_OUTPUT" ;;
-              *)            echo "kind=reminder"  >> "$GITHUB_OUTPUT"
-                            echo "slot=manual"    >> "$GITHUB_OUTPUT" ;;
+              "0 14 * * 2"|"35 14 * * 2") echo "kind=standings" >> "$GITHUB_OUTPUT"
+                                          echo "slot=tue-am"    >> "$GITHUB_OUTPUT" ;;
+              "0 22 * * 3"|"35 22 * * 3") echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+                                          echo "slot=wed-pm"    >> "$GITHUB_OUTPUT" ;;
+              "0 14 * * 4"|"35 14 * * 4") echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+                                          echo "slot=thu-am"    >> "$GITHUB_OUTPUT" ;;
+              "0 22 * * 4"|"35 22 * * 4") echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+                                          echo "slot=thu-pm"    >> "$GITHUB_OUTPUT" ;;
+              *)                          echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+                                          echo "slot=manual"    >> "$GITHUB_OUTPUT" ;;
             esac
           fi
 

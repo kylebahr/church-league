@@ -131,6 +131,14 @@ reminder sits safely ahead of that.
 | Thu 14:00 UTC | `reminder` — locks tonight | Thu 9:00 AM | Thu 8:00 AM |
 | Thu 22:00 UTC | `reminder` — last call, ~2h out | Thu 5:00 PM | Thu 4:00 PM |
 
+Each of those has a **retry 35 minutes later on the same slot**. GitHub's scheduler is best-effort:
+ticks run late under load and are sometimes dropped entirely — one was dropped on 2026-09-16
+because the workflow file had been edited four minutes beforehand. Because `--once` is keyed by
+slot, the retry is a no-op when the first run worked and a rescue when it did not.
+
+**Editing `.github/workflows/emails.yml` shortly before a scheduled tick will probably cost you
+that tick.** Push workflow changes well clear of the times above.
+
 Plus `launch`, a one-time announcement that the site exists, carrying the rescaled payout table.
 
 **Cron is UTC and has no concept of daylight saving**, so the Central times above shift an hour
