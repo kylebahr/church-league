@@ -54,15 +54,39 @@ const contestLink = (nextWeek && seasonContests[String(nextWeek)]) || league.lin
 const haveSpecificLink = !!(nextWeek && seasonContests[String(nextWeek)]);
 
 /* ----------------------------------------------------------------- styling */
+/**
+ * The EMAIL is light even though the site is dark, on purpose.
+ *
+ * Dark-designed email is unreliable: Gmail, Outlook and Apple Mail each treat
+ * it differently and some auto-invert, so the design cannot be trusted to
+ * survive. A dark slab also reads as a marketing blast in an otherwise white
+ * inbox, which nudges it toward Promotions. The email is a notification; the
+ * site is the destination. They do not have to match.
+ *
+ * Note the two oranges. #f2711c is the brand fill, but on white it is only
+ * ~2.9:1 against the background - too weak for text. Text emphasis uses a
+ * darkened #b8560c (~4.5:1). Same reasoning for money: bright green fills the
+ * button, a darker green sets type.
+ */
 const C = {
-  bg: '#0f1113', panel: '#1b1e21', border: '#2b3035', text: '#ffffff',
-  dim: '#9aa3ad', orange: '#f2711c', green: '#53d337',
-  sheet: '#ffffff', sheetAlt: '#f4f5f6', sheetTx: '#16181a', head: '#3c4248',
+  bg: '#eef1f4',          // page behind the card, so the card reads as a card
+  panel: '#ffffff',       // card
+  border: '#e3e7ea',
+  text: '#14171a',        // headings
+  body: '#3f474e',        // body copy
+  dim: '#6b747c',         // secondary / captions
+  orange: '#b8560c',      // orange for TEXT on white
+  orangeFill: '#f2711c',  // brand orange for fills
+  green: '#1a7d10',       // money as text
+  greenFill: '#53d337',   // button
+  sheet: '#ffffff', sheetAlt: '#f7f9fa', sheetTx: '#16181a', head: '#191d21',
 };
 const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
 const shell = (title, inner) => `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
 <title>${esc(title)}</title></head>
 <body style="margin:0;padding:0;background:${C.bg};">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg};padding:18px 10px;">
@@ -70,7 +94,7 @@ const shell = (title, inner) => `<!DOCTYPE html>
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;font-family:${FONT};">
   <tr><td style="padding:0 0 16px">
     <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-      <td style="background:${C.orange};border-radius:7px;width:34px;height:34px;text-align:center;color:#fff;font-weight:bold;font-size:15px;font-family:${FONT}">CL</td>
+      <td style="background:${C.orangeFill};border-radius:7px;width:34px;height:34px;text-align:center;color:#fff;font-weight:bold;font-size:15px;font-family:${FONT}">CL</td>
       <td style="padding-left:10px">
         <div style="color:${C.text};font-size:16px;font-weight:bold;line-height:1.2">${esc(league.leagueName)}</div>
         <div style="color:${C.dim};font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:bold">${esc(league.seasonLabel)}</div>
@@ -78,7 +102,7 @@ const shell = (title, inner) => `<!DOCTYPE html>
     </tr></table>
   </td></tr>
   ${inner}
-  <tr><td style="padding:22px 0 8px;border-top:1px solid ${C.border};color:#6b737c;font-size:11px;line-height:1.6">
+  <tr><td style="padding:22px 2px 8px;border-top:1px solid #dde2e6;color:${C.dim};font-size:11px;line-height:1.6">
     ${esc(league.leagueName)} &middot; ${league.members.length} teams &middot; ${money(payouts.poolTotal)} pool.
     Commissioner ${esc(league.commissioner.name)}.<br>
     Sent automatically when the standings update. Reply to this email to yell at ${esc(league.commissioner.name.split(' ')[0])}.
@@ -87,13 +111,13 @@ const shell = (title, inner) => `<!DOCTYPE html>
 </td></tr></table>
 </body></html>`;
 
-const card = inner => `<tr><td style="background:${C.panel};border:1px solid ${C.border};border-radius:10px;padding:18px;margin-bottom:14px">${inner}</td></tr>
+const card = inner => `<tr><td style="background:${C.panel};border:1px solid ${C.border};border-radius:10px;padding:18px;box-shadow:0 1px 2px rgba(20,23,26,.06)">${inner}</td></tr>
 <tr><td style="height:14px;line-height:14px">&nbsp;</td></tr>`;
 
 const h = t => `<div style="color:${C.text};font-size:12px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;margin:0 0 12px">${t}</div>`;
 
 const button = (href, label, primary = true) =>
-  `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${primary ? C.green : C.panel};border:1px solid ${primary ? C.green : C.border};border-radius:5px">
+  `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${primary ? C.greenFill : C.panel};border:1px solid ${primary ? C.greenFill : '#cbd2d8'};border-radius:5px">
     <a href="${esc(href)}" style="display:inline-block;padding:13px 22px;color:${primary ? '#06230b' : C.text};font-family:${FONT};font-size:13px;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;text-decoration:none">${label}</a>
   </td></tr></table>`;
 
@@ -122,7 +146,7 @@ function launchEmail() {
     card(`
       <div style="color:${C.dim};font-size:11px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase">The spreadsheet is retired</div>
       <div style="color:${C.text};font-size:27px;font-weight:bold;line-height:1.15;margin:8px 0 10px">The league site is live</div>
-      <div style="color:#d7dce1;font-size:14px;line-height:1.62;margin-bottom:18px">
+      <div style="color:${C.body};font-size:14px;line-height:1.62;margin-bottom:18px">
         Standings, winnings, every lineup, and a running tally of who owes what &mdash;
         updated within a minute of each week's contest going final. No login, works on your phone.
         Bookmark it.
@@ -131,7 +155,7 @@ function launchEmail() {
       ${siteUrl ? `<div style="margin-top:12px;color:${C.dim};font-size:12px;word-break:break-all">${esc(siteUrl)}</div>` : ''}
     `),
     lastWeek ? card(`${h(`Week ${lastWeek.week} is already up there`)}
-      <div style="color:#d7dce1;font-size:14px;line-height:1.6;margin-bottom:14px">
+      <div style="color:${C.body};font-size:14px;line-height:1.6;margin-bottom:14px">
         <b style="color:${C.orange}">${esc(lastWeek.winners.join(' & '))}</b> took it with
         <b style="color:${C.orange}">${lastWeek.leagueHigh}</b> and
         <span style="color:${C.green};font-weight:bold">${money(lastWeek.cashPerWinner)}</span>.
@@ -148,7 +172,7 @@ function launchEmail() {
       </div>
     `) : '',
     card(`${h(`Payouts updated for ${league.members.length} teams`)}
-      <div style="color:#d7dce1;font-size:14px;line-height:1.6;margin-bottom:14px">
+      <div style="color:${C.body};font-size:14px;line-height:1.6;margin-bottom:14px">
         We landed at <b style="color:${C.text}">${league.members.length} teams</b>, not 21, so the pool is
         <b style="color:${C.green}">${money(P.poolTotal)}</b> and the structure rescaled.
         <b style="color:${C.text}">${cutN} make the playoffs</b>, ${league.schedule.toiletBowlTeams} drop to the Toilet Bowl.
@@ -165,7 +189,7 @@ function launchEmail() {
       </div>
     `),
     nextWeek ? card(`${h(`Week ${nextWeek}`)}
-      <div style="color:#d7dce1;font-size:14px;line-height:1.6;margin-bottom:14px">
+      <div style="color:${C.body};font-size:14px;line-height:1.6;margin-bottom:14px">
         Get your lineup in before the first kickoff. You cannot submit after that even if none of
         your players are in that game. Miss it and you take the league's lowest score for the week
         &mdash; first offense you get a free pass, after that it is ${money(league.penalty.subsequentFine)} to have a late
@@ -202,7 +226,7 @@ function standingsEmail() {
       <div style="margin-top:16px">${siteUrl ? button(siteUrl, 'See Full Standings') : `<span style="color:${C.dim};font-size:13px">Set SITE_URL to include the site link.</span>`}</div>
     `),
     card(`${h(`Week ${lastWeek.week} Recap`)}
-      <div style="color:#d7dce1;font-size:14px;line-height:1.62">${recap.map(p =>
+      <div style="color:${C.body};font-size:14px;line-height:1.62">${recap.map(p =>
         `<p style="margin:0 0 10px">${p.replace(/class="cash"/g, `style="color:${C.green};font-weight:bold"`).replace(/<b>/g, `<b style="color:${C.orange}">`)}</p>`).join('')}</div>
     `),
     card(`${h('Standings')}
@@ -217,7 +241,7 @@ function standingsEmail() {
       </div>
     `),
     nextWeek ? card(`${h(`Week ${nextWeek} is next`)}
-      <div style="color:#d7dce1;font-size:14px;line-height:1.6;margin-bottom:14px">
+      <div style="color:${C.body};font-size:14px;line-height:1.6;margin-bottom:14px">
         Lineups lock at the first kickoff. You cannot enter after that, so do it now.
         ${haveSpecificLink ? '' : `<br><span style="color:${C.dim};font-size:12.5px">This links to the league page &mdash; the Week ${nextWeek} contest link goes here once it exists.</span>`}
       </div>
@@ -253,7 +277,7 @@ function reminderEmail() {
     card(`
       <div style="color:${C.orange};font-size:11px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase">${esc(u.tag)}</div>
       <div style="color:${C.text};font-size:26px;font-weight:bold;line-height:1.15;margin:8px 0 10px">${u.lede.replace('{W}', nextWeek)}</div>
-      <div style="color:#d7dce1;font-size:14px;line-height:1.6;margin-bottom:16px">
+      <div style="color:${C.body};font-size:14px;line-height:1.6;margin-bottom:16px">
         ${u.line}
         You cannot submit after that, even if none of your players are in the opening game.
         Miss it and you take the league's lowest score for the week &mdash; or ${money(league.penalty.subsequentFine)} out of pocket
