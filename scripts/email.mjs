@@ -275,9 +275,19 @@ fs.writeFileSync(preview, html);
 // --once: refuse to send the same email twice for the same week. Without this a
 // weekly cron would re-send Tuesday's results every Tuesday until new data lands.
 const LOG_PATH = path.join(DATA, 'email-log.json');
+// Dedupe granularity differs by kind, on purpose:
+//   launch    - once per season, ever
+//   standings - once per week, so a Tuesday cron cannot re-send last week's
+//   reminder  - once per DAY. There are deliberately two reminder crons
+//               (Wed evening and Thu morning) for the same week, and keying
+//               those by week would make Thursday's look like a duplicate and
+//               silently drop it.
+const today = new Date().toISOString().slice(0, 10);
 const logKey = kind === 'launch'
   ? `launch:${league.season}`
-  : `${kind}:${league.season}:${kind === 'standings' ? (lastWeek ? lastWeek.week : '?') : nextWeek}`;
+  : kind === 'standings'
+    ? `standings:${league.season}:${lastWeek ? lastWeek.week : '?'}`
+    : `reminder:${league.season}:${nextWeek}:${today}`;
 const readLog = () => {
   try { return JSON.parse(fs.readFileSync(LOG_PATH, 'utf8')); } catch { return {}; }
 };
