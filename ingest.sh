@@ -14,13 +14,14 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-CSV=""; WEEK=""; LINK=""; PUSH=1; DRY=0
+CSV=""; WEEK=""; LINK=""; PUSH=1; DRY=0; UNATTENDED=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --week)    WEEK="$2"; shift 2 ;;
-    --link)    LINK="$2"; shift 2 ;;
-    --no-push) PUSH=0; shift ;;
-    --dry)     DRY=1; shift ;;
+    --week)       WEEK="$2"; shift 2 ;;
+    --link)       LINK="$2"; shift 2 ;;
+    --no-push)    PUSH=0; shift ;;
+    --dry)        DRY=1; shift ;;
+    --unattended) UNATTENDED=1; shift ;;
     -h|--help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*)        echo "unknown flag: $1" >&2; exit 1 ;;
     *)         CSV="$1"; shift ;;
@@ -71,8 +72,31 @@ fi
 
 DEST=$(printf "data/weeks/%s-w%02d.csv" "$SEASON" "$WEEK")
 if [[ -f "$DEST" && $DRY -eq 0 ]]; then
+  if [[ $UNATTENDED -eq 1 ]]; then
+    # Never silently replace a week that already scored and already emailed.
+    echo "Week $WEEK already ingested. Refusing to overwrite unattended."
+    exit 3
+  fi
   read -r -p "$DEST already exists. Overwrite week $WEEK? [y/N] " ok
   [[ "$ok" == "y" || "$ok" == "Y" ]] || { echo "Aborted."; exit 1; }
+fi
+
+# Unattended runs must not act on a file that is not this league's contest -
+# ingesting the wrong CSV would score it AND email 17 people. Require most of
+# the roster to appear in the export before touching anything.
+if [[ $UNATTENDED -eq 1 ]]; then
+  node -e "
+    const fs=require('fs');
+    import('./scripts/lib/csv.mjs').then(m=>{
+      const d=m.parseContestStandings(fs.readFileSync(process.argv[1],'utf8'));
+      const roster=require('./data/league.json').members.map(x=>x.username.toLowerCase());
+      const names=d.entries.map(e=>e.username.toLowerCase());
+      const hit=roster.filter(u=>names.includes(u)).length;
+      const need=Math.ceil(roster.length*0.7);
+      console.log('  roster match: '+hit+' of '+roster.length+' (need '+need+')');
+      if(hit<need){ console.error('  Not this league\'s contest. Ignoring.'); process.exit(4); }
+    }).catch(e=>{ console.error('  '+e.message); process.exit(4); });
+  " "$CSV" || exit 4
 fi
 
 if [[ $DRY -eq 1 ]]; then

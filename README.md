@@ -189,6 +189,56 @@ Or run the **League emails** workflow manually from the Actions tab with *dry ru
 
 ---
 
+## Automating the ingest
+
+The weekly job can be reduced to one action: click **Export Lineups to CSV** on the DK contest
+page. `scripts/install-watcher.sh` installs a launchd agent that watches `~/Downloads` and runs
+`./ingest.sh --unattended` the moment a contest export lands.
+
+```bash
+./scripts/install-watcher.sh              # install
+./scripts/install-watcher.sh --status     # is it working?
+./scripts/install-watcher.sh --uninstall  # remove
+```
+
+Unattended mode is deliberately paranoid, because a false positive would both score wrong data
+and email 17 people:
+
+1. filename must match `contest-standings-*.csv` and be less than 12 hours old
+2. file size must stop changing (a download arrives in pieces)
+3. content sha must not already exist under `data/weeks/`
+4. at least 70% of the roster must appear in the export, or it is ignored
+5. it will never overwrite a week that is already ingested
+
+### macOS will block this until you choose one of three things
+
+A launchd agent gets no access to `~/Downloads` or `~/Documents`, and macOS denies it *silently* —
+it appears in the log only as `Operation not permitted`. `--status` detects this and says so.
+
+1. **Grant Full Disk Access to `/bin/bash`** (System Settings → Privacy & Security). One checkbox,
+   but it is a broad grant to every script on the machine. Understand the tradeoff.
+2. **Move out of the protected folders.** Put the repo somewhere like `~/church-league` and point
+   Chrome's download folder at `~/church-league/inbox`. No permission needed at all — TCC only
+   guards Desktop, Documents and Downloads.
+3. **Skip the watcher** and keep running `./ingest.sh` yourself. It is one command.
+
+### Why the download itself is not automated
+
+DraftKings has no usable path for it, and the ways around that are worse than the problem:
+
+- `GET /contest/exportfullstandingscsv?contestId=…` **302s to the login page.** It needs a
+  logged-in session.
+- `api.draftkings.com` returns **403 from Akamai** to any non-browser request.
+- Each week is a *new* contest with a new id, so the id has to be discovered from the league page,
+  which is also behind auth.
+
+Getting past that means storing DK session cookies that expire constantly, and defeating bot
+detection on a gambling site where the account holds real money and 17 people depend on it. The
+failure mode is not "the script breaks", it is "the account gets flagged mid-season". Clicking
+Export is two seconds and carries none of that risk.
+
+---
+
 ## Local development
 
 ```bash
