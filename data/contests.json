@@ -1,0 +1,6 @@
+{
+  "_README": "Weekly DraftKings contest links. Paste each week's link here (or pass --link to ingest.sh and it lands here automatically). Emails fall back to the league home page when a week is missing.",
+  "2026": {
+    "1": "https://www.draftkings.com/draft/contest/195281131"
+  }
+}

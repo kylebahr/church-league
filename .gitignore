@@ -1,0 +1,10 @@
+# Email addresses never belong in git. Local only; CI uses the LEAGUE_EMAILS secret.
+data/emails.json
+
+# Generated
+site/
+out/
+node_modules/
+
+# OS
+.DS_Store

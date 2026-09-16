@@ -1,0 +1,40 @@
+{
+  "_README": "Single source of truth for money. Every dollar shown on the site comes from here. Edit numbers, commit, done - no code changes. The build FAILS LOUDLY if allocations do not sum to the pool, so you can never publish a broken table.",
+  "teamCount": 17,
+  "buyIn": 250,
+  "poolTotal": 4250,
+  "derivation": "21-team/$5,250 structure rescaled to 17 teams/$4,250. Weekly held at $100/wk x 14. Toilet Bowl held at one full buy-in ($250). Remaining $2,600 split between regular-season and playoff buckets on the original 53.97/46.03 ratio, then rounded to clean dollars.",
+  "weekly": {
+    "label": "Weekly High Scorer",
+    "amount": 100,
+    "weeks": [1, 14],
+    "total": 1400,
+    "onTie": "split"
+  },
+  "regularSeason": {
+    "label": "Regular Season (cumulative roto, Weeks 1-14)",
+    "total": 1400,
+    "places": [
+      { "place": 1, "amount": 650 },
+      { "place": 2, "amount": 375 },
+      { "place": 3, "amount": 235 },
+      { "place": 4, "amount": 140 }
+    ]
+  },
+  "playoffs": {
+    "label": "Championship Playoffs (Weeks 15-18, top 7 reset to zero)",
+    "total": 1200,
+    "places": [
+      { "place": 1, "amount": 650 },
+      { "place": 2, "amount": 345 },
+      { "place": 3, "amount": 205 }
+    ]
+  },
+  "toiletBowl": {
+    "label": "Toilet Bowl (Weeks 15-18, bottom 10 reset to zero)",
+    "total": 250,
+    "places": [
+      { "place": 1, "amount": 250 }
+    ]
+  }
+}

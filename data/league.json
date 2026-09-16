@@ -1,0 +1,126 @@
+{
+  "leagueName": "Church League",
+  "season": "2026",
+  "seasonLabel": "2026-27 Season",
+  "buyIn": 250,
+  "commissioner": {
+    "name": "Kyle Bahr",
+    "email": "kylebahr88@gmail.com"
+  },
+  "links": {
+    "leagueHome": "https://www.draftkings.com/leagues/q5kwexy8/contests/upcoming",
+    "joinLeague": "https://dkn.gs/r/zBmPX8i2dkiLlyovD9kT8Q",
+    "site": ""
+  },
+  "schedule": {
+    "regularSeasonWeeks": [
+      1,
+      14
+    ],
+    "playoffWeeks": [
+      15,
+      18
+    ],
+    "playoffTeams": 7,
+    "toiletBowlTeams": 10,
+    "_comment": "playoffTeams derived from 14/32 NFL playoff rate (43.75%) x 17 teams = 7.44 -> 7"
+  },
+  "penalty": {
+    "firstOffense": "free_late_lineup",
+    "subsequentFine": 25,
+    "_comment": "1st missed lineup: late lineup counts free. 2nd+: league-low score for that week unless a $25 fine is paid, which lets a late lineup count. Record rulings in data/overrides.json."
+  },
+  "tiebreakers": {
+    "weeklyRoto": "excel_rank_shared",
+    "weeklyCashOnTie": "split",
+    "seasonRank": "cumulative_roto_then_points_for"
+  },
+  "members": [
+    {
+      "username": "Annihilus",
+      "name": "Kyle Bahr",
+      "paid": false
+    },
+    {
+      "username": "Zste2311",
+      "name": "Zak Steins",
+      "paid": false
+    },
+    {
+      "username": "bearsconner67",
+      "name": "Connor Darrow",
+      "paid": false
+    },
+    {
+      "username": "MKE_AL",
+      "name": "Al Synowicz",
+      "paid": false
+    },
+    {
+      "username": "thom53",
+      "name": "Jason Thomton",
+      "paid": false
+    },
+    {
+      "username": "SHEENING61",
+      "name": "John Reineking",
+      "paid": false
+    },
+    {
+      "username": "GreenWeezy",
+      "name": "Will Koleno",
+      "paid": false
+    },
+    {
+      "username": "askfarwell",
+      "name": "Alex Kassees",
+      "paid": false
+    },
+    {
+      "username": "bill.reineking",
+      "name": "Bill Reineking",
+      "paid": false
+    },
+    {
+      "username": "urfullofBS23",
+      "name": "Brent Scheele",
+      "paid": false
+    },
+    {
+      "username": "Yolander",
+      "name": "John Kais",
+      "paid": false
+    },
+    {
+      "username": "Bobby_the_Butcher",
+      "name": "Nick Bender",
+      "paid": false
+    },
+    {
+      "username": "Marauder94",
+      "name": "Alex Delgado",
+      "paid": false
+    },
+    {
+      "username": "HaHa2108",
+      "name": "Dustin Mihm",
+      "paid": false
+    },
+    {
+      "username": "Scheele",
+      "name": "Steve Scheele",
+      "paid": false
+    },
+    {
+      "username": "SaquenDeezNuts",
+      "name": "Greg Reineking",
+      "paid": false
+    },
+    {
+      "username": "landoflakes",
+      "name": "",
+      "paid": false
+    }
+  ],
+  "_emails": "Email addresses deliberately live OUTSIDE this file so they are never committed. Local: data/emails.json (gitignored). CI: the LEAGUE_EMAILS secret. See README."
+}

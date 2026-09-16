@@ -1,0 +1,6 @@
+{
+  "_README": "Copy to data/emails.json (gitignored) and fill in. Also paste the same list into the LEAGUE_EMAILS secret so the scheduled emails work: gh secret set LEAGUE_EMAILS",
+  "members": [
+    "kylebahr88@gmail.com"
+  ]
+}

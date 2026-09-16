@@ -1,0 +1,17 @@
+{
+  "_README": "Commissioner rulings. Anything here beats the auto-computed result. Keyed by season -> week -> username.",
+  "_rulings": {
+    "late_lineup": "Late lineup accepted. Requires \"points\". Use for a 1st offense free pass.",
+    "fine_paid":   "$25 paid, late lineup counts. Requires \"points\". Fine is added to their ledger.",
+    "league_low":  "Force the week's lowest league score. This is already the automatic default for a no-show, so you rarely need it.",
+    "score":       "Manually set a score for any reason. Requires \"points\"."
+  },
+  "_example": {
+    "2026": {
+      "3": {
+        "landoflakes": { "ruling": "late_lineup", "points": 121.4, "note": "1st offense - free pass" }
+      }
+    }
+  },
+  "2026": {}
+}

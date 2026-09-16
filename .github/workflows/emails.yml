@@ -1,0 +1,84 @@
+name: League emails
+
+# Times are UTC because cron does not understand daylight saving.
+#   14:00 UTC = 9am CDT / 8am CST
+#   22:00 UTC = 5pm CDT / 4pm CST
+on:
+  schedule:
+    - cron: '0 14 * * 2'   # Tuesday morning  - results are live
+    - cron: '0 14 * * 4'   # Thursday morning - lineups lock tonight
+    - cron: '0 22 * * 3'   # Wednesday late   - last call before Thursday
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: Which email to send
+        required: true
+        default: standings
+        type: choice
+        options: [standings, reminder]
+      dry:
+        description: Dry run (build the email, send nothing)
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Decide which email this run sends
+        id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "kind=${{ inputs.kind }}" >> "$GITHUB_OUTPUT"
+            echo "dry=${{ inputs.dry }}"   >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 14 * * 2" ]; then
+            echo "kind=standings" >> "$GITHUB_OUTPUT"
+            echo "dry=false"      >> "$GITHUB_OUTPUT"
+          else
+            echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+            echo "dry=false"      >> "$GITHUB_OUTPUT"
+          fi
+
+      # Off-season guard: no ingested weeks means no email, ever.
+      - name: Skip if the season is not running
+        id: guard
+        run: |
+          COUNT=$(ls data/weeks/*.csv 2>/dev/null | wc -l | tr -d ' ')
+          echo "weeks=$COUNT" >> "$GITHUB_OUTPUT"
+          if [ "$COUNT" = "0" ]; then echo "No weeks ingested - skipping."; fi
+
+      - name: Send
+        if: steps.guard.outputs.weeks != '0'
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          node scripts/email.mjs "${{ steps.pick.outputs.kind }}" --once \
+            ${{ steps.pick.outputs.dry == 'true' && '--dry' || '' }}
+
+      - name: Remember what was sent
+        if: steps.guard.outputs.weeks != '0'
+        run: |
+          if ! git diff --quiet data/email-log.json; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/email-log.json
+            git commit -m "Log ${{ steps.pick.outputs.kind }} email"
+            git push
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: email-preview
+          path: out/
+          if-no-files-found: ignore

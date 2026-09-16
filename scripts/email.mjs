@@ -1,0 +1,270 @@
+#!/usr/bin/env node
+// Weekly league email.
+//
+//   node scripts/email.mjs standings            # results + standings are live
+//   node scripts/email.mjs reminder             # lineups lock soon, get in
+//   node scripts/email.mjs standings --dry      # write the HTML, send nothing
+//   node scripts/email.mjs standings --to me@x  # send only to one address
+//
+// Writes a preview to out/email-<kind>.html on every run, including real sends.
+// SENDS NOTHING unless GMAIL_USER and GMAIL_APP_PASSWORD are present in the
+// environment, so a misconfigured run is a no-op rather than a mistake.
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { computeSeason } from './lib/engine.mjs';
+import { validatePayouts, buildLedger } from './lib/money.mjs';
+import { analyzeWeek } from './lib/dfs.mjs';
+import { buildRecap, recapHeadline } from './lib/recap.mjs';
+import { sendMail } from './lib/smtp.mjs';
+import { esc, money } from './lib/html.mjs';
+
+const ROOT = path.resolve(import.meta.dirname, '..');
+const DATA = path.join(ROOT, 'data');
+const J = p => JSON.parse(fs.readFileSync(path.join(DATA, p), 'utf8'));
+
+const argv = process.argv.slice(2);
+const kind = argv.find(a => !a.startsWith('-')) || 'standings';
+const flag = n => argv.includes(`--${n}`);
+const val = n => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : null; };
+const DRY = flag('dry');
+
+if (!['standings', 'reminder'].includes(kind)) {
+  console.error(`Unknown email kind "${kind}". Use "standings" or "reminder".`);
+  process.exit(1);
+}
+
+const league = J('league.json');
+const payouts = J('payouts.json');
+const overrides = J('overrides.json');
+const contests = fs.existsSync(path.join(DATA, 'contests.json')) ? J('contests.json') : {};
+validatePayouts(payouts, league);
+
+const state = computeSeason({ league, overrides, payouts, dataDir: DATA });
+const ledger = buildLedger(state);
+const siteUrl = (process.env.SITE_URL || league.links.site || '').replace(/\/$/, '');
+const lastWeek = state.weeks[state.weeks.length - 1] || null;
+const nextWeek = state.nextWeek;
+
+const seasonContests = contests[String(league.season)] || {};
+const contestLink = (nextWeek && seasonContests[String(nextWeek)]) || league.links.leagueHome;
+const haveSpecificLink = !!(nextWeek && seasonContests[String(nextWeek)]);
+
+/* ----------------------------------------------------------------- styling */
+const C = {
+  bg: '#0f1113', panel: '#1b1e21', border: '#2b3035', text: '#ffffff',
+  dim: '#9aa3ad', orange: '#f2711c', green: '#53d337',
+  sheet: '#ffffff', sheetAlt: '#f4f5f6', sheetTx: '#16181a', head: '#3c4248',
+};
+const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+
+const shell = (title, inner) => `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(title)}</title></head>
+<body style="margin:0;padding:0;background:${C.bg};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg};padding:18px 10px;">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;font-family:${FONT};">
+  <tr><td style="padding:0 0 16px">
+    <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+      <td style="background:${C.orange};border-radius:7px;width:34px;height:34px;text-align:center;color:#fff;font-weight:bold;font-size:15px;font-family:${FONT}">CL</td>
+      <td style="padding-left:10px">
+        <div style="color:${C.text};font-size:16px;font-weight:bold;line-height:1.2">${esc(league.leagueName)}</div>
+        <div style="color:${C.dim};font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:bold">${esc(league.seasonLabel)}</div>
+      </td>
+    </tr></table>
+  </td></tr>
+  ${inner}
+  <tr><td style="padding:22px 0 8px;border-top:1px solid ${C.border};color:#6b737c;font-size:11px;line-height:1.6">
+    ${esc(league.leagueName)} &middot; ${league.members.length} teams &middot; ${money(payouts.poolTotal)} pool.
+    Commissioner ${esc(league.commissioner.name)}.<br>
+    Sent automatically when the standings update. Reply to this email to yell at ${esc(league.commissioner.name.split(' ')[0])}.
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+
+const card = inner => `<tr><td style="background:${C.panel};border:1px solid ${C.border};border-radius:10px;padding:18px;margin-bottom:14px">${inner}</td></tr>
+<tr><td style="height:14px;line-height:14px">&nbsp;</td></tr>`;
+
+const h = t => `<div style="color:${C.text};font-size:12px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;margin:0 0 12px">${t}</div>`;
+
+const button = (href, label, primary = true) =>
+  `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${primary ? C.green : C.panel};border:1px solid ${primary ? C.green : C.border};border-radius:5px">
+    <a href="${esc(href)}" style="display:inline-block;padding:13px 22px;color:${primary ? '#06230b' : C.text};font-family:${FONT};font-size:13px;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;text-decoration:none">${label}</a>
+  </td></tr></table>`;
+
+// Rank and team read left; every numeric column reads right.
+function sheetTable(headers, rows) {
+  const align = i => (i <= 1 ? 'left' : 'right');
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.sheet};border-radius:6px;overflow:hidden;border-collapse:collapse">
+  <tr>${headers.map((x, i) => `<th style="background:${C.head};color:#cfd5da;font-family:${FONT};font-size:10px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;text-align:${align(i)};padding:8px 10px">${x}</th>`).join('')}</tr>
+  ${rows.map((r, ri) => `<tr style="background:${ri % 2 ? C.sheetAlt : C.sheet}">${r.map((c, i) =>
+    `<td style="color:${C.sheetTx};font-family:${FONT};font-size:13px;text-align:${align(i)};padding:9px 10px;border-bottom:1px solid #e2e5e8">${c}</td>`).join('')}</tr>`).join('')}
+  </table>`;
+}
+
+/* -------------------------------------------------------------- standings */
+function standingsEmail() {
+  if (!lastWeek) throw new Error('No weeks ingested, so there is nothing to report. Run ingest first.');
+  const analysis = analyzeWeek(lastWeek);
+  const recap = buildRecap({ state, week: lastWeek, analysis, ledger });
+  const top = state.standings.slice(0, 8);
+  const cutN = league.schedule.playoffTeams;
+
+  const inner = [
+    card(`
+      <div style="color:${C.dim};font-size:11px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase">Week ${lastWeek.week} is in the books</div>
+      <div style="color:${C.text};font-size:26px;font-weight:bold;line-height:1.15;margin:8px 0 4px">${esc(lastWeek.winners.join(' & '))} ${lastWeek.winners.length > 1 ? 'tie' : 'wins'} with ${lastWeek.leagueHigh}</div>
+      <div style="color:${C.green};font-size:15px;font-weight:bold">${money(lastWeek.cashPerWinner)}${lastWeek.winners.length > 1 ? ' each' : ''}</div>
+      <div style="margin-top:16px">${siteUrl ? button(siteUrl, 'See Full Standings') : `<span style="color:${C.dim};font-size:13px">Set SITE_URL to include the site link.</span>`}</div>
+    `),
+    card(`${h(`Week ${lastWeek.week} Recap`)}
+      <div style="color:#d7dce1;font-size:14px;line-height:1.62">${recap.map(p =>
+        `<p style="margin:0 0 10px">${p.replace(/class="cash"/g, `style="color:${C.green};font-weight:bold"`).replace(/<b>/g, `<b style="color:${C.orange}">`)}</p>`).join('')}</div>
+    `),
+    card(`${h('Standings')}
+      ${sheetTable(['#', 'Team', 'Roto', 'Pts For'], top.map(t => [
+        `<b>${t.rank}</b>`,
+        `<b>${esc(t.username)}</b>${t.name ? `<br><span style="color:#5e666e;font-size:11px">${esc(t.name)}</span>` : ''}`,
+        `<b>${t.roto}</b>`, t.pointsFor.toFixed(2),
+      ]))}
+      <div style="color:${C.dim};font-size:12px;margin-top:11px">
+        Top ${cutN} of ${league.members.length} make the Championship bracket.
+        ${siteUrl ? `<a href="${esc(siteUrl)}" style="color:${C.orange}">Full table &rarr;</a>` : ''}
+      </div>
+    `),
+    nextWeek ? card(`${h(`Week ${nextWeek} is next`)}
+      <div style="color:#d7dce1;font-size:14px;line-height:1.6;margin-bottom:14px">
+        Lineups lock at the first kickoff. You cannot enter after that, so do it now.
+        ${haveSpecificLink ? '' : `<br><span style="color:${C.dim};font-size:12.5px">This links to the league page &mdash; the Week ${nextWeek} contest link goes here once it exists.</span>`}
+      </div>
+      ${button(contestLink, `Enter Week ${nextWeek}`)}
+    `) : '',
+  ].join('');
+
+  return {
+    subject: `${recapHeadline(lastWeek)}${nextWeek ? ` - Week ${nextWeek} is open` : ''}`,
+    html: shell(`Week ${lastWeek.week} results`, inner),
+  };
+}
+
+/* --------------------------------------------------------------- reminder */
+function reminderEmail() {
+  if (!nextWeek) throw new Error('Season is complete, so there is no contest to remind anyone about.');
+  const cutN = league.schedule.playoffTeams;
+  const bubble = state.standings[cutN - 1];
+  const inner = [
+    card(`
+      <div style="color:${C.orange};font-size:11px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase">Lineups lock soon</div>
+      <div style="color:${C.text};font-size:26px;font-weight:bold;line-height:1.15;margin:8px 0 10px">Get your Week ${nextWeek} lineup in</div>
+      <div style="color:#d7dce1;font-size:14px;line-height:1.6;margin-bottom:16px">
+        You cannot submit after the first kickoff, even if none of your players are in that game.
+        Miss it and you take the league's lowest score for the week &mdash; or ${money(league.penalty.subsequentFine)} out of pocket
+        if it is not your first offense.
+        ${haveSpecificLink ? '' : `<br><br><span style="color:${C.dim};font-size:12.5px">This links to the league page; the Week ${nextWeek} contest is at the top.</span>`}
+      </div>
+      ${button(contestLink, `Enter Week ${nextWeek}`)}
+    `),
+    lastWeek ? card(`${h('Where things stand')}
+      ${sheetTable(['#', 'Team', 'Roto'], state.standings.slice(0, 5).map(t => [
+        `<b>${t.rank}</b>`, `<b>${esc(t.username)}</b>`, `<b>${t.roto}</b>`,
+      ]))}
+      <div style="color:${C.dim};font-size:12px;margin-top:11px">
+        ${bubble ? `${esc(bubble.username)} holds the last playoff spot at ${bubble.roto} roto points. ` : ''}
+        ${siteUrl ? `<a href="${esc(siteUrl)}" style="color:${C.orange}">Full standings &rarr;</a>` : ''}
+      </div>
+    `) : '',
+  ].join('');
+
+  return {
+    subject: `Week ${nextWeek} lineups lock soon - get in`,
+    html: shell(`Week ${nextWeek} reminder`, inner),
+  };
+}
+
+/* ------------------------------------------------------------------- send */
+const { subject, html } = kind === 'standings' ? standingsEmail() : reminderEmail();
+
+const outDir = path.join(ROOT, 'out');
+fs.mkdirSync(outDir, { recursive: true });
+const preview = path.join(outDir, `email-${kind}.html`);
+fs.writeFileSync(preview, html);
+
+// --once: refuse to send the same email twice for the same week. Without this a
+// weekly cron would re-send Tuesday's results every Tuesday until new data lands.
+const LOG_PATH = path.join(DATA, 'email-log.json');
+const logKey = `${kind}:${league.season}:${kind === 'standings' ? (lastWeek ? lastWeek.week : '?') : nextWeek}`;
+const readLog = () => {
+  try { return JSON.parse(fs.readFileSync(LOG_PATH, 'utf8')); } catch { return {}; }
+};
+if (flag('once')) {
+  const log = readLog();
+  if (log[logKey]) {
+    console.log(`Already sent "${logKey}" at ${log[logKey]}. Nothing to do.`);
+    process.exit(0);
+  }
+}
+
+/**
+ * Recipients never live in git. Resolution order:
+ *   1. LEAGUE_EMAILS env/secret - comma, semicolon or newline separated
+ *   2. data/emails.json         - local only, gitignored
+ * Anything that is not a plausible address is dropped rather than guessed at.
+ */
+function resolveRecipients() {
+  const clean = list => [...new Set(list
+    .map(e => String(e).trim().replace(/^.*<|>.*$/g, '').toLowerCase())
+    .filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)))];
+
+  const env = process.env.LEAGUE_EMAILS;
+  if (env && env.trim()) return { src: 'LEAGUE_EMAILS secret', list: clean(env.split(/[,;\n]/)) };
+
+  const local = path.join(DATA, 'emails.json');
+  if (fs.existsSync(local)) {
+    const j = JSON.parse(fs.readFileSync(local, 'utf8'));
+    const list = Array.isArray(j) ? j : Object.values(j).flat();
+    return { src: 'data/emails.json', list: clean(list.filter(v => typeof v === 'string')) };
+  }
+  return { src: 'nowhere', list: [] };
+}
+
+const only = val('to');
+const resolved = resolveRecipients();
+const recipients = only
+  ? [only]
+  : resolved.list.filter(e => e !== league.commissioner.email.toLowerCase());
+
+console.log(`kind      : ${kind}`);
+console.log(`subject   : ${subject}`);
+console.log(`preview   : ${path.relative(ROOT, preview)}`);
+console.log(`recipients: ${recipients.length}${only ? ' (--to override)' : ` from ${resolved.src}`}`);
+
+if (DRY) { console.log('\nDRY RUN - nothing sent.'); process.exit(0); }
+
+const user = process.env.GMAIL_USER, pass = process.env.GMAIL_APP_PASSWORD;
+if (!user || !pass) {
+  console.log('\nGMAIL_USER / GMAIL_APP_PASSWORD not set - nothing sent. Preview written above.');
+  process.exit(0);
+}
+if (!recipients.length) {
+  console.log('\nNo recipient addresses found. Set the LEAGUE_EMAILS secret or create data/emails.json - nothing sent.');
+  process.exit(0);
+}
+
+// Everyone is bcc'd so 17 addresses are not published to 17 people.
+const res = await sendMail({
+  user, pass,
+  from: `${league.commissioner.name} <${user}>`,
+  to: [user], bcc: recipients,
+  replyTo: league.commissioner.email,
+  subject, html,
+});
+console.log(`\nSent to ${res.accepted} address(es) from ${user}.`);
+
+if (flag('once') && !only) {
+  const log = readLog();
+  log[logKey] = new Date().toISOString();
+  fs.writeFileSync(LOG_PATH, JSON.stringify(log, null, 2) + '\n');
+  console.log(`Recorded "${logKey}" in data/email-log.json.`);
+}

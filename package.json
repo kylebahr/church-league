@@ -1,0 +1,14 @@
+{
+  "name": "church-league",
+  "private": true,
+  "type": "module",
+  "description": "Rotisserie standings, winnings and DFS analytics for the Church League",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node scripts/validate-engine.mjs",
+    "serve": "python3 -m http.server 4173 --directory site",
+    "email:standings": "node scripts/email.mjs standings --dry",
+    "email:reminder": "node scripts/email.mjs reminder --dry"
+  },
+  "engines": { "node": ">=20" }
+}
