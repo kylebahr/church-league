@@ -132,9 +132,12 @@ export function analyzeSeason(weeks) {
     const players = dedupePlayers(w.players);
     const fptsOf = new Map(players.map(p => [p.player, p.fpts]));
     for (const p of players) {
-      const t = tally.get(p.player) || { player: p.player, pos: p.pos, starts: 0, fpts: 0, weeks: 0 };
-      t.starts += Math.round(p.drafted * w.rows.length);
-      t.fpts = r2(t.fpts + p.fpts);
+      const t = tally.get(p.player)
+        || { player: p.player, pos: p.pos, starts: 0, fpts: 0, weeks: 0, delivered: 0 };
+      const startsThisWeek = Math.round(p.drafted * w.rows.length);
+      t.starts += startsThisWeek;
+      t.fpts = r2(t.fpts + p.fpts);          // his own production, summed over weeks
+      t.delivered = r2(t.delivered + p.fpts * startsThisWeek); // points he handed the league
       t.weeks++;
       tally.set(p.player, t);
     }
@@ -152,7 +155,9 @@ export function analyzeSeason(weeks) {
       perManager.set(r.username, m);
     }
   }
-  const mostStarted = [...tally.values()].sort((a, b) => b.starts - a.starts).slice(0, 25);
+  const mostStarted = [...tally.values()]
+    .map(t => ({ ...t, avgFpts: r2(t.weeks ? t.fpts / t.weeks : 0) }))
+    .sort((a, b) => b.starts - a.starts).slice(0, 25);
   const managers = [...perManager.values()].map(m => ({
     username: m.username, name: m.name,
     chalkiness: r2(m.chalkScore / Math.max(1, m.weeks)),

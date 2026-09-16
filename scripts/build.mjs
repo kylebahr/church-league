@@ -497,11 +497,18 @@ function pagePlayers() {
     .sort((a, b) => b.fpts - a.fpts).slice(0, 20);
 
   body.push(panel({
-    title: 'Most Started', note: 'total roster spots used this season', flush: true,
-    body: sheet(`<table class="dt"><thead><tr><th>Player</th><th>Pos</th><th class="num">Starts</th><th class="num">Total FPTS</th><th class="num">FPTS / Start</th></tr></thead>
+    title: 'Most Started', note: 'total roster spots the league has spent on each player', flush: true,
+    body: sheet(`<table class="dt"><thead><tr><th>Player</th><th>Pos</th><th class="num">Starts</th>
+      <th class="num hide-sm">Weeks</th><th class="num">Avg Wk</th><th class="num">Delivered</th></tr></thead>
     <tbody>${seasonDfs.mostStarted.map(p => `<tr><td class="who">${esc(p.player)}</td><td>${esc(p.pos)}</td>
-      <td class="num fpts">${p.starts}</td><td class="num">${num(p.fpts)}</td>
-      <td class="num">${num(p.starts ? p.fpts / p.starts : 0)}</td></tr>`).join('')}</tbody></table>`),
+      <td class="num fpts">${p.starts}</td>
+      <td class="num hide-sm">${p.weeks}</td>
+      <td class="num">${num(p.avgFpts)}</td>
+      <td class="num" style="font-weight:800">${num(p.delivered)}</td></tr>`).join('')}</tbody></table>`)
+      + `<p style="font-size:12.5px;color:var(--text-faint);margin:12px 0 0">
+        <b>Avg Wk</b> is the player's own average score in weeks someone started him.
+        <b>Delivered</b> is the total fantasy points he handed the league &mdash; his score each week
+        multiplied by how many managers had him. It is the honest measure of who actually moved money.</p>`,
   }));
 
   body.push(`<div class="grid-2">
