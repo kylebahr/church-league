@@ -52,12 +52,20 @@ const cutN = league.schedule.playoffTeams;
 /** Short phrases, not full sentences - this renders as one quiet line. */
 function setupItems() {
   const missingNames = league.members.filter(m => !m.name).map(m => m.username);
+  // data/emails.json is gitignored, so CI cannot see it - count the LEAGUE_EMAILS
+  // secret there instead, or the public page reports a problem that is not real.
+  // Only the count is ever used; no address reaches the built site.
+  const countAddrs = list => list.filter(v => typeof v === 'string' && v.includes('@')).length;
   const emailsFile = path.join(DATA, 'emails.json');
-  const emailCount = fs.existsSync(emailsFile)
-    ? (() => { try { const j = JSON.parse(fs.readFileSync(emailsFile, 'utf8'));
-        return (Array.isArray(j) ? j : Object.values(j).flat()).filter(v => typeof v === 'string' && v.includes('@')).length;
-      } catch { return 0; } })()
-    : 0;
+  let emailCount = 0;
+  if (process.env.LEAGUE_EMAILS) {
+    emailCount = countAddrs(process.env.LEAGUE_EMAILS.split(/[,;\n]/).map(x => x.trim()));
+  } else if (fs.existsSync(emailsFile)) {
+    try {
+      const j = JSON.parse(fs.readFileSync(emailsFile, 'utf8'));
+      emailCount = countAddrs(Array.isArray(j) ? j : Object.values(j).flat());
+    } catch { emailCount = 0; }
+  }
   const items = [];
   if (missingNames.length) {
     items.push(missingNames.length === 1 ? 'one missing name' : `${missingNames.length} missing names`);
