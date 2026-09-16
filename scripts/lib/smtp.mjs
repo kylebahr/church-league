@@ -8,10 +8,10 @@ const b64 = s => Buffer.from(String(s), 'utf8').toString('base64');
 
 export async function sendMail({
   host = 'smtp.gmail.com', port = 465, user, pass,
-  from, to, bcc = [], subject, html, text, replyTo,
+  from, to, cc = [], bcc = [], subject, html, text, replyTo,
 }) {
   if (!user || !pass) throw new Error('SMTP user/pass missing (set GMAIL_USER and GMAIL_APP_PASSWORD)');
-  const rcpts = [...(Array.isArray(to) ? to : [to]), ...bcc].filter(Boolean);
+  const rcpts = [...(Array.isArray(to) ? to : [to]), ...cc, ...bcc].filter(Boolean);
   if (!rcpts.length) throw new Error('no recipients');
 
   const sock = tls.connect({ host, port, servername: host });
@@ -58,7 +58,7 @@ export async function sendMail({
     await cmd(`MAIL FROM:<${addr(from)}>`, [250]);
     for (const r of rcpts) await cmd(`RCPT TO:<${addr(r)}>`, [250, 251]);
     await cmd('DATA', [354]);
-    sock.write(buildMessage({ from, to, subject, html, text, replyTo }));
+    sock.write(buildMessage({ from, to, cc, subject, html, text, replyTo }));
     sock.write('\r\n.\r\n');
     await read([250]);
     await cmd('QUIT');
@@ -73,12 +73,16 @@ const addr = s => {
   return (m ? m[1] : String(s)).trim();
 };
 
-function buildMessage({ from, to, subject, html, text, replyTo }) {
+function buildMessage({ from, to, cc = [], subject, html, text, replyTo }) {
   const boundary = 'cl_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
   const toList = (Array.isArray(to) ? to : [to]).filter(Boolean).join(', ');
+  // Cc is a visible header, which is the point: Reply All reaches the whole
+  // league so the trash talk lands where everyone can see it.
+  const ccList = (Array.isArray(cc) ? cc : [cc]).filter(Boolean).join(', ');
   const headers = [
     `From: ${from}`,
     toList ? `To: ${toList}` : 'To: undisclosed-recipients:;',
+    ccList ? `Cc: ${ccList}` : null,
     replyTo ? `Reply-To: ${replyTo}` : null,
     `Subject: ${encodeHeader(subject)}`,
     `Date: ${new Date().toUTCString()}`,

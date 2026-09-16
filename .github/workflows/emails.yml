@@ -15,7 +15,7 @@ on:
         required: true
         default: standings
         type: choice
-        options: [standings, reminder]
+        options: [launch, standings, reminder]
       dry:
         description: Dry run (build the email, send nothing)
         type: boolean

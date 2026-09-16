@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Weekly league email.
 //
+//   node scripts/email.mjs launch               # one-time: the site is live
 //   node scripts/email.mjs standings            # results + standings are live
 //   node scripts/email.mjs reminder             # lineups lock soon, get in
 //   node scripts/email.mjs standings --dry      # write the HTML, send nothing
@@ -29,8 +30,8 @@ const flag = n => argv.includes(`--${n}`);
 const val = n => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : null; };
 const DRY = flag('dry');
 
-if (!['standings', 'reminder'].includes(kind)) {
-  console.error(`Unknown email kind "${kind}". Use "standings" or "reminder".`);
+if (!['launch', 'standings', 'reminder'].includes(kind)) {
+  console.error(`Unknown email kind "${kind}". Use "launch", "standings" or "reminder".`);
   process.exit(1);
 }
 
@@ -102,6 +103,85 @@ function sheetTable(headers, rows) {
   ${rows.map((r, ri) => `<tr style="background:${ri % 2 ? C.sheetAlt : C.sheet}">${r.map((c, i) =>
     `<td style="color:${C.sheetTx};font-family:${FONT};font-size:13px;text-align:${align(i)};padding:9px 10px;border-bottom:1px solid #e2e5e8">${c}</td>`).join('')}</tr>`).join('')}
   </table>`;
+}
+
+/* ----------------------------------------------------------------- launch */
+/** One-time announcement. The standings email assumes they know the site. */
+function launchEmail() {
+  const cutN = league.schedule.playoffTeams;
+  const P = payouts;
+  const row = (label, amount, note) => `<tr>
+    <td style="color:${C.sheetTx};font-family:${FONT};font-size:13px;padding:9px 10px;border-bottom:1px solid #e2e5e8">
+      <b>${label}</b>${note ? `<br><span style="color:#5e666e;font-size:11.5px">${note}</span>` : ''}</td>
+    <td style="color:#1a7d10;font-family:${FONT};font-size:13px;font-weight:bold;text-align:right;padding:9px 10px;border-bottom:1px solid #e2e5e8;white-space:nowrap">${money(amount)}</td>
+  </tr>`;
+
+  const inner = [
+    card(`
+      <div style="color:${C.dim};font-size:11px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase">The spreadsheet is retired</div>
+      <div style="color:${C.text};font-size:27px;font-weight:bold;line-height:1.15;margin:8px 0 10px">The league site is live</div>
+      <div style="color:#d7dce1;font-size:14px;line-height:1.62;margin-bottom:18px">
+        Standings, winnings, every lineup, and a running tally of who owes what &mdash;
+        updated within a minute of each week's contest going final. No login, works on your phone.
+        Bookmark it.
+      </div>
+      ${siteUrl ? button(siteUrl, 'Open the League Site') : ''}
+      ${siteUrl ? `<div style="margin-top:12px;color:${C.dim};font-size:12px;word-break:break-all">${esc(siteUrl)}</div>` : ''}
+    `),
+    lastWeek ? card(`${h(`Week ${lastWeek.week} is already up there`)}
+      <div style="color:#d7dce1;font-size:14px;line-height:1.6;margin-bottom:14px">
+        <b style="color:${C.orange}">${esc(lastWeek.winners.join(' & '))}</b> took it with
+        <b style="color:${C.orange}">${lastWeek.leagueHigh}</b> and
+        <span style="color:${C.green};font-weight:bold">${money(lastWeek.cashPerWinner)}</span>.
+        League average was ${lastWeek.leagueAvg}.
+      </div>
+      ${sheetTable(['#', 'Team', 'Roto', 'Pts For'], state.standings.slice(0, 5).map(t => [
+        `<b>${t.rank}</b>`,
+        `<b>${esc(t.username)}</b>${t.name ? `<br><span style="color:#5e666e;font-size:11px">${esc(t.name)}</span>` : ''}`,
+        `<b>${t.roto}</b>`, t.pointsFor.toFixed(2),
+      ]))}
+      <div style="color:${C.dim};font-size:12px;margin-top:11px">
+        Scoring is unchanged: each week the high score gets ${league.members.length} roto points
+        down to 1 for last. Verified bit-identical to the old spreadsheet.
+      </div>
+    `) : '',
+    card(`${h(`Payouts updated for ${league.members.length} teams`)}
+      <div style="color:#d7dce1;font-size:14px;line-height:1.6;margin-bottom:14px">
+        We landed at <b style="color:${C.text}">${league.members.length} teams</b>, not 21, so the pool is
+        <b style="color:${C.green}">${money(P.poolTotal)}</b> and the structure rescaled.
+        <b style="color:${C.text}">${cutN} make the playoffs</b>, ${league.schedule.toiletBowlTeams} drop to the Toilet Bowl.
+        All ${league.members.length} buy-ins are in.
+      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.sheet};border-radius:6px;overflow:hidden;border-collapse:collapse">
+        ${row('Weekly high scorer', P.weekly.total, `${money(P.weekly.amount)} &times; ${P.weekly.weeks[1] - P.weekly.weeks[0] + 1} weeks, ties split`)}
+        ${row('Regular season top 4', P.regularSeason.total, P.regularSeason.places.map(x => money(x.amount)).join(' / '))}
+        ${row('Championship playoffs', P.playoffs.total, P.playoffs.places.map(x => money(x.amount)).join(' / '))}
+        ${row('Toilet Bowl', P.toiletBowl.total, 'winner gets their buy-in back')}
+      </table>
+      <div style="color:${C.dim};font-size:12px;margin-top:11px">
+        Full breakdown and the running ledger are on the Money page.
+      </div>
+    `),
+    nextWeek ? card(`${h(`Week ${nextWeek}`)}
+      <div style="color:#d7dce1;font-size:14px;line-height:1.6;margin-bottom:14px">
+        Get your lineup in before the first kickoff. You cannot submit after that even if none of
+        your players are in that game. Miss it and you take the league's lowest score for the week
+        &mdash; first offense you get a free pass, after that it is ${money(league.penalty.subsequentFine)} to have a late
+        lineup count.
+        ${haveSpecificLink ? '' : `<br><br><span style="color:${C.dim};font-size:12.5px">This goes to the league page; the Week ${nextWeek} contest is at the top.</span>`}
+      </div>
+      ${button(contestLink, `Enter Week ${nextWeek}`)}
+    `) : '',
+    card(`<div style="color:${C.dim};font-size:12.5px;line-height:1.6">
+      Everyone is on the Cc line, so hit Reply All and the whole league sees it.
+      That is deliberate.
+    </div>`),
+  ].join('');
+
+  return {
+    subject: `Church League ${league.seasonLabel.replace(' Season', '')}: the league site is live${nextWeek ? ` - Week ${nextWeek} is open` : ''}`,
+    html: shell('The league site is live', inner),
+  };
 }
 
 /* -------------------------------------------------------------- standings */
@@ -184,7 +264,8 @@ function reminderEmail() {
 }
 
 /* ------------------------------------------------------------------- send */
-const { subject, html } = kind === 'standings' ? standingsEmail() : reminderEmail();
+const { subject, html } = kind === 'launch' ? launchEmail()
+  : kind === 'standings' ? standingsEmail() : reminderEmail();
 
 const outDir = path.join(ROOT, 'out');
 fs.mkdirSync(outDir, { recursive: true });
@@ -194,7 +275,9 @@ fs.writeFileSync(preview, html);
 // --once: refuse to send the same email twice for the same week. Without this a
 // weekly cron would re-send Tuesday's results every Tuesday until new data lands.
 const LOG_PATH = path.join(DATA, 'email-log.json');
-const logKey = `${kind}:${league.season}:${kind === 'standings' ? (lastWeek ? lastWeek.week : '?') : nextWeek}`;
+const logKey = kind === 'launch'
+  ? `launch:${league.season}`
+  : `${kind}:${league.season}:${kind === 'standings' ? (lastWeek ? lastWeek.week : '?') : nextWeek}`;
 const readLog = () => {
   try { return JSON.parse(fs.readFileSync(LOG_PATH, 'utf8')); } catch { return {}; }
 };
@@ -252,11 +335,12 @@ if (!recipients.length) {
   process.exit(0);
 }
 
-// Everyone is bcc'd so 17 addresses are not published to 17 people.
+// Everyone is Cc'd on purpose: these are 17 guys who all know each other, and
+// a visible Cc list means Reply All reaches the whole league. Not Bcc.
 const res = await sendMail({
   user, pass,
   from: `${league.commissioner.name} <${user}>`,
-  to: [user], bcc: recipients,
+  to: [user], cc: recipients,
   replyTo: league.commissioner.email,
   subject, html,
 });

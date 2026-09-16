@@ -34,7 +34,8 @@ rebuilds the site, commits and pushes. GitHub Actions deploys and the site is li
 
 | File | What it controls |
 |---|---|
-| `data/league.json` | Roster, real names, **email addresses**, who has paid, playoff size, penalty rule |
+| `data/league.json` | Roster, real names, who has paid, playoff size, penalty rule |
+| `data/emails.json` | The 17 addresses. **Gitignored** — never committed. Mirrored into the `LEAGUE_EMAILS` secret |
 | `data/payouts.json` | Every dollar. The build **fails** if the allocation does not close on the pool |
 | `data/overrides.json` | Commissioner rulings — late lineups, fines, manual scores |
 | `data/contests.json` | Weekly DK contest links used by the emails |
@@ -119,12 +120,14 @@ the build will tell you if the math stops closing.
 
 ## Emails
 
-Two automated emails, sent from your Gmail by GitHub Actions:
+Three emails, sent from your Gmail by GitHub Actions:
+
+- **`launch`** — one-time announcement that the site exists, with the rescaled payout table
 
 - **Tuesday 9am CT** — results are live, standings, recap, link to next contest
 - **Wednesday 4pm CT and Thursday 8am CT** — lineups lock tonight, get in
 
-Everyone is **bcc'd**, so 17 addresses are not published to 17 people.
+Everyone is **Cc'd**, not Bcc'd, so Reply All reaches the whole league and the trash talk stays public. This does mean all 17 addresses are visible to all 17 members, which is the intent.
 
 ### One-time setup
 
@@ -138,7 +141,7 @@ gh secret set GMAIL_USER --body "kylebahr88@gmail.com"
 gh variable set SITE_URL --body "https://kylebahr.github.io/church-league"
 ```
 
-3. Add the 17 email addresses to `data/league.json`. Members with no address are skipped.
+3. Addresses live in `data/emails.json` (gitignored) and the `LEAGUE_EMAILS` secret, never in git.
 
 Nothing sends until both secrets exist, so a half-finished setup is a no-op rather than a mistake.
 `--once` keys every send to `kind:season:week` in `data/email-log.json`, so a cron cannot send
@@ -147,7 +150,8 @@ Tuesday's results twice.
 ### Test before trusting it
 
 ```bash
-node scripts/email.mjs standings --dry                    # writes out/email-standings.html
+node scripts/email.mjs launch    --dry                    # writes out/email-launch.html
+node scripts/email.mjs standings --dry
 node scripts/email.mjs reminder  --dry
 node scripts/email.mjs standings --to you@example.com     # real send, only to you
 ```

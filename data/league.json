@@ -39,87 +39,87 @@
     {
       "username": "Annihilus",
       "name": "Kyle Bahr",
-      "paid": false
+      "paid": true
     },
     {
       "username": "Zste2311",
       "name": "Zak Steins",
-      "paid": false
+      "paid": true
     },
     {
       "username": "bearsconner67",
       "name": "Connor Darrow",
-      "paid": false
+      "paid": true
     },
     {
       "username": "MKE_AL",
       "name": "Al Synowicz",
-      "paid": false
+      "paid": true
     },
     {
       "username": "thom53",
       "name": "Jason Thomton",
-      "paid": false
+      "paid": true
     },
     {
       "username": "SHEENING61",
       "name": "John Reineking",
-      "paid": false
+      "paid": true
     },
     {
       "username": "GreenWeezy",
       "name": "Will Koleno",
-      "paid": false
+      "paid": true
     },
     {
       "username": "askfarwell",
       "name": "Alex Kassees",
-      "paid": false
+      "paid": true
     },
     {
       "username": "bill.reineking",
       "name": "Bill Reineking",
-      "paid": false
+      "paid": true
     },
     {
       "username": "urfullofBS23",
       "name": "Brent Scheele",
-      "paid": false
+      "paid": true
     },
     {
       "username": "Yolander",
       "name": "John Kais",
-      "paid": false
+      "paid": true
     },
     {
       "username": "Bobby_the_Butcher",
       "name": "Nick Bender",
-      "paid": false
+      "paid": true
     },
     {
       "username": "Marauder94",
       "name": "Alex Delgado",
-      "paid": false
+      "paid": true
     },
     {
       "username": "HaHa2108",
       "name": "Dustin Mihm",
-      "paid": false
+      "paid": true
     },
     {
       "username": "Scheele",
       "name": "Steve Scheele",
-      "paid": false
+      "paid": true
     },
     {
       "username": "SaquenDeezNuts",
       "name": "Greg Reineking",
-      "paid": false
+      "paid": true
     },
     {
       "username": "landoflakes",
       "name": "",
-      "paid": false
+      "paid": true
     }
   ],
   "_emails": "Email addresses deliberately live OUTSIDE this file so they are never committed. Local: data/emails.json (gitignored). CI: the LEAGUE_EMAILS secret. See README."
