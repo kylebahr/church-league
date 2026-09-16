@@ -348,8 +348,16 @@ if (!user || !pass) {
   process.exit(0);
 }
 if (!recipients.length) {
-  console.log('\nNo recipient addresses found. Set the LEAGUE_EMAILS secret or create data/emails.json - nothing sent.');
-  process.exit(0);
+  console.error(
+    '\nNo recipient addresses found, so nothing was sent.\n' +
+    `  Looked in: LEAGUE_EMAILS env (${process.env.LEAGUE_EMAILS ? 'set' : 'NOT set'}), ` +
+    `then ${path.relative(ROOT, path.join(DATA, 'emails.json'))} (${fs.existsSync(path.join(DATA, 'emails.json')) ? 'present' : 'absent'}).\n` +
+    '  In CI the LEAGUE_EMAILS secret must be passed to the step env - the file is gitignored.'
+  );
+  // Exit non-zero: a real send that reached nobody is a failure, not a no-op.
+  // Reporting success here is how a missing secret went unnoticed through an
+  // entire "successful" send.
+  process.exit(1);
 }
 
 // Everyone is Cc'd on purpose: these are 17 guys who all know each other, and
