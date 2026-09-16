@@ -11,6 +11,12 @@ export async function sendMail({
   from, to, cc = [], bcc = [], subject, html, text, replyTo,
 }) {
   if (!user || !pass) throw new Error('SMTP user/pass missing (set GMAIL_USER and GMAIL_APP_PASSWORD)');
+  // Google shows app passwords as four groups of four ("abcd efgh ijkl mnop"),
+  // but the credential is the 16 characters with no spaces. Pasting it as
+  // displayed is the usual cause of 535 BadCredentials, so normalise it here
+  // rather than making a human notice. An app password never contains spaces.
+  user = String(user).trim();
+  pass = String(pass).replace(/\s+/g, '');
   const rcpts = [...(Array.isArray(to) ? to : [to]), ...cc, ...bcc].filter(Boolean);
   if (!rcpts.length) throw new Error('no recipients');
 
@@ -54,7 +60,23 @@ export async function sendMail({
     await cmd('EHLO church-league.local', [250]);
     await cmd('AUTH LOGIN', [334]);
     await cmd(b64(user), [334]);
-    await cmd(b64(pass), [235]);
+    try {
+      await cmd(b64(pass), [235]);
+    } catch (e) {
+      if (/535|BadCredentials|not accepted/i.test(e.message)) {
+        throw new Error(
+          `Gmail rejected the credentials for ${user} (SMTP 535).\n` +
+          `  The app password is ${pass.length} characters after stripping spaces; Google issues 16.\n` +
+          '  Check, in order:\n' +
+          '   1. The app password was generated on the SAME account as GMAIL_USER.\n' +
+          '   2. 2-Step Verification is still on for that account.\n' +
+          '   3. The secret holds only the password - no quotes, no "App password:" prefix.\n' +
+          '   4. It has not been revoked at https://myaccount.google.com/apppasswords\n' +
+          `  Original reply: ${e.message}`
+        );
+      }
+      throw e;
+    }
     await cmd(`MAIL FROM:<${addr(from)}>`, [250]);
     for (const r of rcpts) await cmd(`RCPT TO:<${addr(r)}>`, [250, 251]);
     await cmd('DATA', [354]);
