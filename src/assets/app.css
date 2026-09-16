@@ -560,6 +560,56 @@ footer.ft a { color: var(--text-dim); }
 .tag-in  { color: var(--green-tint); background: var(--green-soft); border: 1px solid var(--green-line); }
 .tag-out { color: var(--red-tint);   background: var(--red-soft);   border: 1px solid var(--red-line); }
 
+/* ---------- mobile primary nav ----------
+   A bottom tab bar, not a hamburger. Four destinations is too few to justify
+   hiding them, and the problem was discovery: at 375px the scrolling top nav
+   put 4 of 5 items off screen with scrollbar-width:none, so nothing hinted
+   they existed. Always visible, thumb-reachable, zero JavaScript. */
+.tabbar { display: none; }
+
+@media (max-width: 620px) {
+  .tabbar {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: rgba(12, 15, 18, .93);
+    -webkit-backdrop-filter: saturate(150%) blur(14px);
+    backdrop-filter: saturate(150%) blur(14px);
+    border-top: 1px solid var(--hair);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .tabbar a {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 9px 2px 8px; text-decoration: none; color: var(--text-faint);
+    border-top: 2px solid transparent; margin-top: -1px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tabbar a:hover { text-decoration: none; }
+  .tabbar svg { width: 21px; height: 21px; }
+  .tabbar span {
+    font: 700 9.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+  }
+  .tabbar a[aria-current="page"] { color: var(--orange); border-top-color: var(--orange); }
+  .tabbar a:active { background: rgba(255, 255, 255, .06); }
+
+  /* the top bar keeps the brand and the one external link; the four internal
+     destinations now live in the bar at the bottom */
+  .nav a:not(.nav-cta) { display: none; }
+  .nav { overflow: visible; }
+
+  /* clear the fixed bar, including the iOS home-indicator inset */
+  body { padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* The squeeze zone: above the tab-bar breakpoint the full top nav is back, but
+   it needs 694px and the wordmark eats 120 of it, so "DK League" fell off
+   screen between 621 and 693px. Drop the wordmark here only - the CL mark
+   still anchors the brand, and phones keep the wordmark because their nav is
+   nearly empty. */
+@media (min-width: 621px) and (max-width: 760px) {
+  .brand-txt { display: none; }
+  .nav a { padding: 0 12px; }
+}
+
 /* ---------- responsive ---------- */
 @media (max-width: 860px) {
   .hero-aside { flex: 1 1 100%; }

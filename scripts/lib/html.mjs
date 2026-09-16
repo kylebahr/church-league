@@ -21,12 +21,36 @@ export const num = (n, d = 2) => n === null || n === undefined
   ? '<span style="color:var(--sheet-dim)">&mdash;</span>'
   : Number(n).toFixed(d).replace(/\.00$/, '');
 
+const ICON = {
+  standings: '<path d="M4 17V9m5 8V4m5 13v-6m5 6V7"/>',
+  weeks: '<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 2.5v4m8-4v4"/>',
+  money: '<path d="M12 2.5v19"/><path d="M16.5 7A3.5 3.5 0 0 0 13 5h-2a3 3 0 0 0 0 6h2.5a3 3 0 0 1 0 6H11a3.5 3.5 0 0 1-3.5-2"/>',
+  players: '<circle cx="9" cy="8" r="3.4"/><path d="M2.5 20.5a6.5 6.5 0 0 1 13 0"/><path d="M16.5 5.2a3.4 3.4 0 0 1 0 6.6M18 20.5a6.4 6.4 0 0 0-1.6-4.3"/>',
+};
+
 const NAV = [
-  ['index.html', 'Standings'],
-  ['weeks.html', 'Weeks'],
-  ['money.html', 'Money'],
-  ['players.html', 'Players'],
+  ['index.html', 'Standings', 'standings'],
+  ['weeks.html', 'Weeks', 'weeks'],
+  ['money.html', 'Money', 'money'],
+  ['players.html', 'Players', 'players'],
 ];
+
+/** A week-detail page belongs to the Weeks tab. */
+const tabFor = page => (page || '').startsWith('week-') ? 'weeks.html' : page;
+
+const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name]}</svg>`;
+
+/**
+ * Mobile primary nav. A bottom bar rather than a hamburger: with four
+ * destinations there is nothing to gain by hiding them, and the problem being
+ * solved IS discovery - at 375px the scrolling top nav left 4 of 5 items off
+ * screen with no affordance. Pure CSS, no open/close state to get wrong.
+ */
+export const tabBar = page => `<nav class="tabbar" aria-label="Primary">
+  ${NAV.map(([href, label, ic]) => `<a href="${href}"${tabFor(page) === href ? ' aria-current="page"' : ''}>
+    ${icon(ic)}<span>${label}</span></a>`).join('')}
+</nav>`;
 
 export function layout({ title, page, league, body, state, band = '', extraHead = '' }) {
   return `<!DOCTYPE html>
@@ -53,7 +77,7 @@ ${extraHead}
   </a>
   <nav class="nav">
     ${NAV.map(([href, label]) =>
-      `<a href="${href}"${page === href ? ' aria-current="page"' : ''}>${label}</a>`).join('\n    ')}
+      `<a href="${href}"${tabFor(page) === href ? ' aria-current="page"' : ''}>${label}</a>`).join('\n    ')}
     <a class="nav-cta" href="${esc(league.links.leagueHome)}" target="_blank" rel="noopener">DK League &#8599;</a>
   </nav>
 </div></header>
@@ -68,6 +92,7 @@ ${body}
   <p class="build">Built <span data-utc="${state.generatedAt}">${new Date(state.generatedAt).toUTCString()}</span><br>
   From DK contest export &middot; Week ${state.lastWeek ?? '&mdash;'}</p>
 </div></footer>
+${tabBar(page)}
 <script src="assets/app.js"></script>
 </body>
 </html>`;
