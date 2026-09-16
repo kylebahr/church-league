@@ -42,6 +42,12 @@ on:
         description: "Send to this ONE address only (leave blank to send to the league). Use this to test a real send without mailing 17 people."
         required: false
         type: string
+      slot:
+        description: "Which scheduled variant to imitate. Changes the urgency wording and, for a real send, the de-duplication key."
+        required: false
+        default: manual
+        type: choice
+        options: [manual, wed-pm, thu-am, thu-pm]
 
 permissions:
   contents: write
@@ -62,6 +68,7 @@ jobs:
             echo "kind=${{ inputs.kind }}" >> "$GITHUB_OUTPUT"
             echo "dry=${{ inputs.dry }}"   >> "$GITHUB_OUTPUT"
             echo "to=${{ inputs.to }}"     >> "$GITHUB_OUTPUT"
+            echo "slot=${{ inputs.slot }}" >> "$GITHUB_OUTPUT"
           else
             echo "dry=false" >> "$GITHUB_OUTPUT"
             # Each pair maps to one slot, so the retry cannot double-send.
