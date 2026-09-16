@@ -55,32 +55,35 @@ const haveSpecificLink = !!(nextWeek && seasonContests[String(nextWeek)]);
 
 /* ----------------------------------------------------------------- styling */
 /**
- * The EMAIL is light even though the site is dark, on purpose.
+ * Hybrid: a LIGHT page with DARK cards on it.
  *
- * Dark-designed email is unreliable: Gmail, Outlook and Apple Mail each treat
- * it differently and some auto-invert, so the design cannot be trusted to
- * survive. A dark slab also reads as a marketing blast in an otherwise white
- * inbox, which nudges it toward Promotions. The email is a notification; the
- * site is the destination. They do not have to match.
+ * The light gutter stops the mail reading as one black slab in a white inbox,
+ * which is most of what a fully light design bought. What it does not buy is
+ * dark-mode safety: the copy inside the cards is still light-on-dark, so a
+ * client that auto-inverts can still mangle it - sometimes worse than a
+ * uniformly light design, because inversion heuristics run per element and can
+ * flip the page while leaving inline card styles alone. Accepted knowingly.
  *
- * Note the two oranges. #f2711c is the brand fill, but on white it is only
- * ~2.9:1 against the background - too weak for text. Text emphasis uses a
- * darkened #b8560c (~4.5:1). Same reasoning for money: bright green fills the
- * button, a darker green sets type.
+ * Two text contexts, and mixing them up is the easy mistake: the header and
+ * footer sit on the LIGHT page and need dark type (pageText/pageDim), while
+ * everything inside a card sits on DARK and needs light type (text/body/dim).
  */
 const C = {
-  bg: '#eef1f4',          // page behind the card, so the card reads as a card
-  panel: '#ffffff',       // card
-  border: '#e3e7ea',
-  text: '#14171a',        // headings
-  body: '#3f474e',        // body copy
-  dim: '#6b747c',         // secondary / captions
-  orange: '#b8560c',      // orange for TEXT on white
-  orangeFill: '#f2711c',  // brand orange for fills
-  green: '#1a7d10',       // money as text
-  greenFill: '#53d337',   // button
+  bg: '#e9edf1',          // light page
+  panel: '#1b1e21',       // dark card
+  border: '#2b3035',      // card edge
+  pageText: '#14171a',    // type ON the light page
+  pageDim: '#5f686f',     // secondary on the light page
+  text: '#ffffff',        // headings inside a dark card
+  body: '#d7dce1',        // body copy inside a dark card
+  dim: '#9aa3ad',         // secondary inside a dark card
+  orange: '#f2711c',      // bright orange is fine against #1b1e21
+  orangeFill: '#f2711c',
+  green: '#53d337',
+  greenFill: '#53d337',
   sheet: '#ffffff', sheetAlt: '#f7f9fa', sheetTx: '#16181a', head: '#191d21',
 };
+
 const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
 const shell = (title, inner) => `<!DOCTYPE html>
@@ -96,13 +99,13 @@ const shell = (title, inner) => `<!DOCTYPE html>
     <table role="presentation" cellpadding="0" cellspacing="0"><tr>
       <td style="background:${C.orangeFill};border-radius:7px;width:34px;height:34px;text-align:center;color:#fff;font-weight:bold;font-size:15px;font-family:${FONT}">CL</td>
       <td style="padding-left:10px">
-        <div style="color:${C.text};font-size:16px;font-weight:bold;line-height:1.2">${esc(league.leagueName)}</div>
-        <div style="color:${C.dim};font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:bold">${esc(league.seasonLabel)}</div>
+        <div style="color:${C.pageText};font-size:16px;font-weight:bold;line-height:1.2">${esc(league.leagueName)}</div>
+        <div style="color:${C.pageDim};font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:bold">${esc(league.seasonLabel)}</div>
       </td>
     </tr></table>
   </td></tr>
   ${inner}
-  <tr><td style="padding:22px 2px 8px;border-top:1px solid #dde2e6;color:${C.dim};font-size:11px;line-height:1.6">
+  <tr><td style="padding:22px 2px 8px;border-top:1px solid #d4dade;color:${C.pageDim};font-size:11px;line-height:1.6">
     ${esc(league.leagueName)} &middot; ${league.members.length} teams &middot; ${money(payouts.poolTotal)} pool.
     Commissioner ${esc(league.commissioner.name)}.<br>
     Sent automatically when the standings update. Reply to this email to yell at ${esc(league.commissioner.name.split(' ')[0])}.
@@ -111,13 +114,13 @@ const shell = (title, inner) => `<!DOCTYPE html>
 </td></tr></table>
 </body></html>`;
 
-const card = inner => `<tr><td style="background:${C.panel};border:1px solid ${C.border};border-radius:10px;padding:18px;box-shadow:0 1px 2px rgba(20,23,26,.06)">${inner}</td></tr>
+const card = inner => `<tr><td style="background:${C.panel};border:1px solid ${C.border};border-radius:10px;padding:18px;box-shadow:0 2px 6px rgba(20,23,26,.14)">${inner}</td></tr>
 <tr><td style="height:14px;line-height:14px">&nbsp;</td></tr>`;
 
 const h = t => `<div style="color:${C.text};font-size:12px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;margin:0 0 12px">${t}</div>`;
 
 const button = (href, label, primary = true) =>
-  `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${primary ? C.greenFill : C.panel};border:1px solid ${primary ? C.greenFill : '#cbd2d8'};border-radius:5px">
+  `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${primary ? C.greenFill : C.panel};border:1px solid ${primary ? C.greenFill : C.border};border-radius:5px">
     <a href="${esc(href)}" style="display:inline-block;padding:13px 22px;color:${primary ? '#06230b' : C.text};font-family:${FONT};font-size:13px;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;text-decoration:none">${label}</a>
   </td></tr></table>`;
 
