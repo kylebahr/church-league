@@ -13,6 +13,8 @@ import { rotoRace, barList } from './lib/chart.mjs';
 import {
   layout, hero, stat, stats, strip, panel, sheet, esc, money, moneyCell, num,
   movementCell, whoami, empty, perfMark,
+  avatar, teamCell, rankChip, wkChip, cutRow, liveChip, heroAside,
+  commishStrip, stripTags, resolveAvatarHues,
 } from './lib/html.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -26,6 +28,8 @@ const overrides = J('overrides.json');
 
 validatePayouts(payouts, league);
 const state = computeSeason({ league, overrides, payouts, dataDir: DATA });
+// One distinct avatar hue per member, probed so no two teams ever collide.
+resolveAvatarHues(league.members.map(m => m.username));
 const ledger = buildLedger(state);
 const perWeek = state.weeks.map(w => analyzeWeek(w));
 const seasonDfs = state.weeks.length ? analyzeSeason(state.weeks) : null;
@@ -44,8 +48,9 @@ const write = (f, html) => fs.writeFileSync(path.join(OUT, f), html);
 const cutN = league.schedule.playoffTeams;
 
 /* ------------------------------------------------------------------ banners */
-function banners() {
-  let out = '';
+
+/** Short phrases, not full sentences - this renders as one quiet line. */
+function setupItems() {
   const missingNames = league.members.filter(m => !m.name).map(m => m.username);
   const emailsFile = path.join(DATA, 'emails.json');
   const emailCount = fs.existsSync(emailsFile)
@@ -53,19 +58,20 @@ function banners() {
         return (Array.isArray(j) ? j : Object.values(j).flat()).filter(v => typeof v === 'string' && v.includes('@')).length;
       } catch { return 0; } })()
     : 0;
-  const setup = [];
-  if (missingNames.length) setup.push(`No real name on file for <b>${missingNames.map(esc).join(', ')}</b> &mdash; add it in <code>data/league.json</code>.`);
-  if (emailCount < league.members.length) setup.push(`Only ${emailCount} of ${league.members.length} email addresses are on file &mdash; add the rest to <code>data/emails.json</code> (gitignored) and the <code>LEAGUE_EMAILS</code> secret.`);
-  if (!league.members.some(m => m.paid)) setup.push(`Nobody is marked <code>"paid": true</code> yet, so the pool shows ${money(payouts.poolTotal)} outstanding.`);
-  if (setup.length) {
-    // NB: this site is public. Never word this as if only the commissioner sees it.
-    out += `<div class="callout"><h3>Setup still pending</h3><ul>${setup.map(s => `<li>${s}</li>`).join('')}</ul>
-      <p style="margin:9px 0 0;color:var(--text-dim);font-size:12.5px">${esc(league.commissioner.name)} is on it.</p></div>`;
+  const items = [];
+  if (missingNames.length) {
+    items.push(missingNames.length === 1 ? 'one missing name' : `${missingNames.length} missing names`);
   }
-  if (state.warnings.length) {
-    out += `<div class="callout warn"><h3>Needs a ruling</h3><ul>${state.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
-  }
-  return out;
+  if (emailCount < league.members.length) items.push('emails not loaded');
+  if (!league.members.some(m => m.paid)) items.push('no buy-ins marked paid');
+  return items;
+}
+
+/** Loud, top-of-page. A missing lineup ruling IS league news. */
+function warnings() {
+  if (!state.warnings.length) return '';
+  return `<div class="callout warn"><h3>Needs a ruling</h3><ul>${
+    state.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
 }
 
 /* ------------------------------------------------------- page: standings */
@@ -73,49 +79,66 @@ function pageIndex() {
   const s = state.standings;
   const leader = s[0];
   const bubble = s[cutN - 1], firstOut = s[cutN];
-  const body = [
-    hero({
-      title: `Standings`,
-      sub: state.weeks.length
-        ? `Through <b>Week ${state.lastWeek}</b> &middot; ${league.members.length} teams &middot; cumulative rotisserie points, Weeks ${league.schedule.regularSeasonWeeks.join('&ndash;')}`
-        : `No weeks ingested yet.`,
-      buttons: [
-        `<a class="btn btn-primary" href="${esc(league.links.leagueHome)}" target="_blank" rel="noopener">Enter This Week's Contest</a>`,
-        `<a class="btn btn-ghost" href="money.html">See the Money</a>`,
+  const band = hero({
+    title: 'Standings',
+    chip: state.weeks.length ? liveChip(`Week ${state.lastWeek} Final`) : '',
+    eyebrow: `${state.weeks.filter(w => w.isRegular).length} of ${league.schedule.regularSeasonWeeks[1]} played`,
+    sub: state.weeks.length
+      ? `Cumulative rotisserie points, Weeks ${league.schedule.regularSeasonWeeks.join('&ndash;')}.
+         <b>${esc(leader.username)}</b> leads on ${leader.roto} &mdash;
+         <b>${cutN} of ${league.members.length}</b> advance to the Championship bracket.`
+      : 'No weeks ingested yet.',
+    aside: heroAside({
+      k: 'Next contest',
+      v: state.nextWeek ? `Week ${state.nextWeek}` : 'Season complete',
+      sub: state.nextWeek ? `${money(payouts.weekly.amount)} up` : '',
+      rows: [
+        ['Prize pool', money(payouts.poolTotal)],
+        ['Buy-in', `${money(league.buyIn)} &times; ${league.members.length}`],
       ],
     }),
-    banners(),
-  ];
+    buttons: [
+      `<a class="btn btn-primary" href="${esc(league.links.leagueHome)}" target="_blank" rel="noopener">Enter Week ${state.nextWeek ?? ''} Contest</a>`,
+      state.lastWeek
+        ? `<a class="btn btn-ghost" href="${wkFile(state.lastWeek)}">Full Week ${state.lastWeek} Results</a>`
+        : `<a class="btn btn-ghost" href="money.html">See the Money</a>`,
+    ],
+  });
+  const body = [warnings()];
 
   if (!state.weeks.length) {
     body.push(panel({ title: 'Waiting on Week 1', body: empty('No contest data yet', 'Drop a DraftKings CSV export into data/weeks/ and rebuild.') }));
-    return layout({ title: 'Standings', page: 'index.html', league, state, body: body.join('\n') });
+    return layout({ title: 'Standings', page: 'index.html', league, state, band, body: body.join('\n') });
   }
 
-  body.push(strip([
-    ['Weeks Played', `${state.weeks.filter(w => w.isRegular).length} of ${league.schedule.regularSeasonWeeks[1]}`],
-    ['Leader', `${esc(leader.username)} &middot; ${leader.roto} pts`],
-    ['Playoff Cut', `${cutN} of ${league.members.length} advance`],
-    ['Prize Pool', money(payouts.poolTotal)],
-    ['Next Contest', state.nextWeek ? `Week ${state.nextWeek}` : 'Season complete'],
-  ]));
-
+  // The strip's five facts now live in the hero sub-headline and the aside, and
+  // the Bubble stat duplicates the Bubble Watch panel below. Four cells fill the
+  // slab exactly at auto-fit minmax(190px, 1fr).
   body.push(stats([
-    stat({ k: 'Week ' + lastWeek.week + ' High', v: lastWeek.leagueHigh, m: lastWeek.winners.join(', '), tone: 'orange' }),
-    stat({ k: 'Week ' + lastWeek.week + ' Average', v: lastWeek.leagueAvg }),
-    stat({ k: 'Week ' + lastWeek.week + ' Low', v: lastWeek.leagueLow, m: lastWeek.rows[lastWeek.rows.length - 1].username }),
-    stat({ k: 'Best Possible', v: lastAnalysis.best.total, m: 'from the league\'s player pool', tone: 'orange' }),
-    stat({ k: 'Bubble', v: `${bubble ? bubble.roto : '-'}`, m: bubble ? `${bubble.username} holds ${cutN}th` : '' }),
+    stat({ k: `Week ${lastWeek.week} high`, v: num(lastWeek.leagueHigh), tone: 'orange',
+           m: `${lastWeek.winners.map(esc).join(', ')} &middot; won ${money(lastWeek.cashPerWinner)}` }),
+    stat({ k: 'League average', v: num(lastWeek.leagueAvg),
+           m: `${lastWeek.rows.filter(r => r.points >= lastWeek.leagueAvg).length} of ${lastWeek.rows.length} cleared it` }),
+    stat({ k: `Week ${lastWeek.week} low`, v: num(lastWeek.leagueLow), m: esc(lastWeek.rows.at(-1).username) }),
+    stat({ k: 'Best possible', v: num(lastAnalysis.best.total), tone: 'orange',
+           m: `${num(lastAnalysis.best.total - lastWeek.leagueHigh)} left in the bin` }),
   ]));
 
   // recap
   const recap = buildRecap({ state, week: lastWeek, analysis: lastAnalysis, ledger });
+  // First paragraph is the week's headline, so it reads as a lede. The
+  // "Full Week N Results" button moved into the hero.
+  const margin = lastWeek.rows.length > 1
+    ? (lastWeek.rows[0].points - lastWeek.rows[1].points).toFixed(1) : null;
   body.push(panel({
     title: `Week ${lastWeek.week} Recap`,
-    note: recapHeadline(lastWeek),
-    body: `<div class="recap">${recap.map(p => `<p>${p}</p>`).join('')}</div>
-      <div class="btn-row" style="margin-top:15px">
-        <a class="btn btn-ghost" href="${wkFile(lastWeek.week)}">Full Week ${lastWeek.week} Results</a>
+    tag: lastWeek.winners.length > 1
+      ? `${lastWeek.winners.length}-way tie`
+      : `${esc(lastWeek.winners[0])} by ${margin}`,
+    note: 'auto-written from the contest export',
+    body: `<div class="recap">
+        <p class="lede">${recap[0]}</p>
+        ${recap.length > 1 ? `<div class="recap-cols">${recap.slice(1).map(p => `<p>${p}</p>`).join('')}</div>` : ''}
       </div>`,
   }));
 
@@ -123,34 +146,44 @@ function pageIndex() {
   const race = rotoRace({ state, weeks: state.weeks });
   if (race) body.push(panel({ title: 'The Race', note: 'cumulative roto points', body: race }));
 
-  // standings table
-  const rowsHtml = s.map((t, i) => {
-    const inPo = i < cutN;
-    return `<tr data-team="${esc(t.username)}"${t.rank === 1 ? ' class="leader"' : ''}${i === cutN - 1 ? ' data-cutline="1"' : ''}>
-      <td class="rk">${t.rank}</td>
-      <td class="num hide-sm">${movementCell(t.movement)}</td>
-      <td class="who">${esc(t.username)}${t.name ? `<small>${esc(t.name)}</small>` : ''}</td>
+  // standings table. The cut is a labelled divider row, so the Bracket column
+  // is gone; Miss stays because it drives the fine ledger.
+  const STANDINGS_COLS = 10;
+  const row = t => `<tr data-team="${esc(t.username)}"${t.rank === 1 ? ' class="leader"' : ''}>
+      <td class="rk">${rankChip(t.rank)}</td>
+      <td>${teamCell(t.username, t.name)}</td>
       <td class="num fpts">${t.roto}</td>
-      <td class="num">${num(t.pointsFor)}</td>
-      <td class="num hide-sm">${num(t.avg)}</td>
-      <td class="num hide-sm">${num(t.best)}</td>
-      <td class="num hide-sm">${num(t.worst)}</td>
-      <td class="num">${t.weeklyWins ? `<span class="pill pill-win">${t.weeklyWins}</span>` : '<span style="color:var(--sheet-dim)">&mdash;</span>'}</td>
-      <td class="num hide-sm">${t.misses ? `<span class="pill pill-miss">${t.misses}</span>` : '<span style="color:var(--sheet-dim)">&mdash;</span>'}</td>
-      <td>${inPo ? '<span class="pill pill-po">Playoff</span>' : '<span class="pill pill-tb">Toilet</span>'}</td>
+      <td class="num" style="font-weight:600">${num(t.pointsFor)}</td>
+      <td class="num soft hide-sm">${num(t.avg)}</td>
+      <td class="num soft hide-sm">${num(t.best)}</td>
+      <td class="num soft hide-sm">${num(t.worst)}</td>
+      <td class="num" style="text-align:center">${wkChip(t.weeklyWins)}</td>
+      <td class="num hide-sm" style="text-align:center">${t.misses ? `<span class="pill pill-miss">${t.misses}</span>` : '<span style="color:#b6bdc4">&mdash;</span>'}</td>
+      <td class="num hide-sm">${movementCell(t.movement)}</td>
     </tr>`;
-  }).join('\n');
+
+  const rowsHtml = (s.length > cutN ? [
+    ...s.slice(0, cutN).map(row),
+    cutRow(STANDINGS_COLS, {
+      label: 'Playoff cut',
+      note: `Top ${cutN} advance to the Championship bracket &middot; everyone below resets into the Toilet Bowl`,
+      right: `${s[cutN - 1].roto} pts to clear`,
+    }),
+    ...s.slice(cutN).map(row),
+  ] : s.map(row)).join('\n');
 
   body.push(panel({
     title: 'Regular Season',
-    note: `tiebreaker is total points-for &middot; dashed line = playoff cut${state.regComplete ? '' : ' (projected)'}`,
+    note: `tiebreaker is total points-for${state.regComplete ? '' : ' &middot; bracket projected'}`,
     head: whoami(league.members),
     flush: true,
     body: sheet(`<table class="dt"><thead><tr>
-      <th>#</th><th class="num hide-sm">Mv</th><th>Team</th>
+      <th>#</th><th>Team</th>
       <th class="num">Roto</th><th class="num">Points For</th>
       <th class="num hide-sm">Avg</th><th class="num hide-sm">Best</th><th class="num hide-sm">Worst</th>
-      <th class="num">Wk W</th><th class="num hide-sm">Miss</th><th>Bracket</th>
+      <th class="num" style="text-align:center">Wk W</th>
+      <th class="num hide-sm" style="text-align:center">Miss</th>
+      <th class="num hide-sm">Trend</th>
     </tr></thead><tbody>${rowsHtml}</tbody></table>`, true),
   }));
 
@@ -159,7 +192,7 @@ function pageIndex() {
     const near = s.slice(Math.max(0, cutN - 3), cutN + 3);
     body.push(panel({
       title: 'Bubble Watch',
-      note: `${cutN} teams make the Championship bracket`,
+      note: `the ${near.length === 6 ? 'six' : near.length} teams either side of the cut`,
       body: barList(near.map(t => ({
         label: t.username, sub: `${t.rank === cutN ? 'last team in' : t.rank === cutN + 1 ? 'first team out' : `${t.rank}${t.rank <= cutN ? ' in' : ' out'}`}`,
         value: t.roto, color: t.rank <= cutN ? 'var(--green)' : 'var(--red)',
@@ -182,7 +215,12 @@ function pageIndex() {
     </div>`);
   }
 
-  return layout({ title: 'Standings', page: 'index.html', league, state, body: body.join('\n') });
+  // Housekeeping lives at the foot of the page, per the reference: a league
+  // member should hit the standings, not the commissioner's to-do list.
+  const setup = setupItems();
+  if (setup.length) body.push(commishStrip(setup));
+
+  return layout({ title: 'Standings', page: 'index.html', league, state, band, body: body.join('\n') });
 }
 
 /* ----------------------------------------------------------- page: weeks */
@@ -192,15 +230,19 @@ function pageWeeks() {
   for (let w = league.schedule.regularSeasonWeeks[0]; w <= league.schedule.playoffWeeks[1]; w++) allWeeks.push(w);
   const have = new Set(state.weeks.map(w => w.week));
 
+  const band = hero({
+    title: 'Weeks',
+    eyebrow: `${state.weeks.length} of ${allWeeks.length} contests ingested`,
+    sub: 'Every week, every score. Tap a week for lineups, leverage plays and the best possible build.',
+  });
   const body = [
-    hero({ title: 'Weeks', sub: `Every week, every score. ${state.weeks.length} of ${allWeeks.length} contests ingested.` }),
     `<div class="wk-nav" style="margin-bottom:18px">${allWeeks.map(w =>
       have.has(w) ? `<a href="${wkFile(w)}">W${w}</a>` : `<a class="future" href="#">W${w}</a>`).join('')}</div>`,
   ];
 
   if (!state.weeks.length) {
     body.push(panel({ body: empty('No weeks yet') }));
-    return layout({ title: 'Weeks', page: 'weeks.html', league, state, body: body.join('\n') });
+    return layout({ title: 'Weeks', page: 'weeks.html', league, state, band, body: body.join('\n') });
   }
 
   // two matrices: roto points and raw points
@@ -216,7 +258,7 @@ function pageWeeks() {
       });
       const total = metric === 'roto' ? t.roto : num(t.pointsFor);
       return `<tr data-team="${esc(t.username)}"${t.rank === 1 ? ' class="leader"' : ''}>
-        <td class="who">${esc(t.username)}</td>${cells.join('')}<td class="num fpts">${total}</td></tr>`;
+        <td>${teamCell(t.username, t.name)}</td>${cells.join('')}<td class="num fpts">${total}</td></tr>`;
     }).join('');
     return sheet(`<table class="dt"><thead><tr><th>Team</th>${
       state.weeks.map(w => `<th class="num"><a href="${wkFile(w.week)}" style="color:inherit">W${w.week}</a></th>`).join('')
@@ -251,7 +293,9 @@ function pageWeeks() {
     <tbody>${regWeeks.map(w => {
       const margin = w.rows.length > 1 ? Math.round((w.rows[0].points - w.rows[1].points) * 100) / 100 : 0;
       return `<tr><td class="rk"><a href="${wkFile(w.week)}" style="color:inherit;font-weight:800">W${w.week}</a></td>
-      <td class="who">${w.winners.map(u => esc(u)).join(' + ')}${w.winners.length === 1 && nameOf(w.winners[0]) ? `<small>${esc(nameOf(w.winners[0]))}</small>` : ''}</td>
+      <td>${w.winners.length === 1
+        ? teamCell(w.winners[0], nameOf(w.winners[0]))
+        : `<span class="teamcell">${w.winners.map(u => avatar(u)).join('')}<span><b>${w.winners.map(esc).join(' + ')}</b></span></span>`}</td>
       <td class="num fpts">${num(w.leagueHigh)}</td>
       <td class="num">${w.winners.length > 1 ? 'tie' : num(margin)}</td>
       <td class="num"><span class="money-pos">${money(w.cashPerWinner)}${w.winners.length > 1 ? ' ea' : ''}</span></td>
@@ -259,26 +303,41 @@ function pageWeeks() {
     }).join('')}</tbody></table>`),
   }));
 
-  return layout({ title: 'Weeks', page: 'weeks.html', league, state, body: body.join('\n') });
+  return layout({ title: 'Weeks', page: 'weeks.html', league, state, band, body: body.join('\n') });
 }
 
 /* ------------------------------------------------------ page: week detail */
 function pageWeek(w, analysis) {
   const rows = w.rows;
   const allWeeks = state.weeks.map(x => x.week);
-  const body = [
-    hero({
-      title: `Week ${w.week}`,
-      sub: `${w.isRegular ? 'Regular season' : 'Playoff week'} &middot; high <b>${w.leagueHigh}</b> &middot; avg ${w.leagueAvg} &middot; low ${w.leagueLow}`,
+  const band = hero({
+    title: `Week ${w.week}`,
+    chip: liveChip('Final'),
+    eyebrow: w.isRegular ? 'Regular season' : 'Playoff week',
+    sub: `High <b>${num(w.leagueHigh)}</b> &middot; average ${num(w.leagueAvg)} &middot; low ${num(w.leagueLow)}.
+          ${w.winners.map(esc).join(' and ')} ${w.winners.length > 1 ? 'split' : 'took'}
+          ${w.isRegular ? money(w.cashPerWinner) : 'the week'}.`,
+    aside: heroAside({
+      k: 'Best possible',
+      v: num(analysis.best.total),
+      sub: `${num(analysis.best.total - w.leagueHigh)} unclaimed`,
+      rows: [
+        ['Entries', `${rows.filter(r => r.entered).length} of ${rows.length}`],
+        ['Winner', w.winners.map(esc).join(' + ')],
+      ],
     }),
+  });
+  const body = [
     `<div class="wk-nav" style="margin-bottom:18px">${allWeeks.map(x =>
       `<a href="${wkFile(x)}"${x === w.week ? ' aria-current="page"' : ''}>W${x}</a>`).join('')}</div>`,
+    // Winner / Entries / Best Possible already sit in the hero aside above, so
+    // this band carries what the aside does not, rather than repeating it.
     strip([
-      ['Winner', w.winners.map(esc).join(' + ')],
       ['High Score', num(w.leagueHigh)],
+      ['Average', num(w.leagueAvg)],
+      ['Low', num(w.leagueLow)],
       ['Payout', w.isRegular ? money(w.cashPerWinner) + (w.winners.length > 1 ? ' each' : '') : '&mdash;'],
-      ['Entries', `${rows.filter(r => r.entered).length} of ${rows.length}`],
-      ['Best Possible', num(analysis.best.total)],
+      ['Roto Awarded', `${rows.length} down to 1`],
     ]),
   ];
 
@@ -291,8 +350,8 @@ function pageWeek(w, analysis) {
     note: `roto points: high score gets ${rows.length}`,
     body: sheet(`<table class="dt"><thead><tr><th>#</th><th>Team</th><th class="num">Points</th><th class="num">Roto</th><th class="num hide-sm">vs Avg</th><th>Status</th></tr></thead>
     <tbody>${rows.map((r, i) => `<tr data-team="${esc(r.username)}"${i === 0 ? ' class="leader"' : ''}>
-      <td class="rk">${i + 1}</td>
-      <td class="who">${esc(r.username)}${r.name && r.name !== r.username ? `<small>${esc(r.name)}</small>` : ''}</td>
+      <td class="rk">${rankChip(i + 1)}</td>
+      <td>${teamCell(r.username, r.name)}</td>
       <td class="num fpts">${num(r.points)}</td>
       <td class="num">${r.roto}</td>
       <td class="num hide-sm">${r.points >= w.leagueAvg ? `<span class="money-pos">+${num(r.points - w.leagueAvg)}</span>` : `<span class="money-neg">${num(r.points - w.leagueAvg)}</span>`}</td>
@@ -341,7 +400,7 @@ function pageWeek(w, analysis) {
       title: 'Solo Starts', note: 'players exactly one manager rolled with', flush: true,
       body: sheet(`<table class="dt"><thead><tr><th>Player</th><th>Only Manager</th><th class="num">FPTS</th></tr></thead>
       <tbody>${analysis.uniques.slice(0, 14).map(p => `<tr data-team="${esc(p.username)}"><td class="who">${esc(p.player)}</td>
-        <td>${esc(p.username)}</td><td class="num fpts">${num(p.fpts)} ${perfMark(p.fpts, 25)}</td></tr>`).join('')}</tbody></table>`),
+        <td>${teamCell(p.username, '')}</td><td class="num fpts">${num(p.fpts)} ${perfMark(p.fpts, 25)}</td></tr>`).join('')}</tbody></table>`),
     }));
   }
 
@@ -352,7 +411,7 @@ function pageWeek(w, analysis) {
     const order = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST'];
     const lu = [...r.lineup].sort((a, b) => order.indexOf(a.slot) - order.indexOf(b.slot));
     return `<div class="lu" style="margin-bottom:14px">
-      <div class="lu-head"><b>${esc(r.username)}</b>${r.name && r.name !== r.username ? `<span style="color:#b9c0c6;font-size:12px">${esc(r.name)}</span>` : ''}<span class="fp">${num(r.points)}</span></div>
+      <div class="lu-head">${avatar(r.username)}<b>${esc(r.username)}</b>${r.name && r.name !== r.username ? `<span style="color:#b9c0c6;font-size:12px">${esc(r.name)}</span>` : ''}<span class="fp">${num(r.points)}</span></div>
       <table class="dt"><thead><tr><th>Pos</th><th>Player</th><th class="num hide-sm">Own</th><th class="num">FPTS</th></tr></thead>
       <tbody>${lu.map(s => {
         const f = fptsOf.get(s.player.trim()) ?? null;
@@ -370,7 +429,7 @@ function pageWeek(w, analysis) {
     body: `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px">${lineups}</div>`,
   }));
 
-  return layout({ title: `Week ${w.week}`, page: wkFile(w.week), league, state, body: body.join('\n') });
+  return layout({ title: `Week ${w.week}`, page: wkFile(w.week), league, state, band, body: body.join('\n') });
 }
 
 function statusPill(r, w) {
@@ -389,11 +448,22 @@ function statusPill(r, w) {
 function pageMoney() {
   const L = ledger;
   const p = L.pool;
-  const body = [
-    hero({
-      title: 'Money',
-      sub: `${money(payouts.poolTotal)} pool &middot; ${league.members.length} buy-ins at ${money(league.buyIn)} &middot; every dollar accounted for`,
+  const band = hero({
+    title: 'Money',
+    eyebrow: 'Every dollar accounted for',
+    sub: `${money(payouts.poolTotal)} pool from ${league.members.length} buy-ins at ${money(league.buyIn)}.
+          Projected awards move with the standings; banked money does not.`,
+    aside: heroAside({
+      k: 'Paid out so far',
+      v: money(p.weeklyPaid),
+      sub: `of ${money(payouts.weekly.total)}`,
+      rows: [
+        ['Weeks done', `${p.weeksDone} of ${p.regWeekCount}`],
+        ['Still to award', money(p.total - p.weeklyPaid)],
+      ],
     }),
+  });
+  const body = [
     strip([
       ['Prize Pool', money(p.total)],
       ['Weekly Paid', `${money(p.weeklyPaid)} of ${money(payouts.weekly.total)}`],
@@ -417,15 +487,15 @@ function pageMoney() {
       <th class="num">Banked</th><th class="num">Projected</th><th class="num">Total</th>
       <th class="num hide-sm">Buy-in</th><th class="num hide-sm">Fines</th><th class="num">Net</th>
     </tr></thead><tbody>${L.rows.map(r => `<tr data-team="${esc(r.username)}">
-      <td class="who">${esc(r.username)}${r.name && r.name !== r.username ? `<small>${esc(r.name)}</small>` : ''}</td>
+      <td>${teamCell(r.username, r.name)}</td>
       <td class="num">${r.weeklyWins || '<span style="color:var(--sheet-dim)">&mdash;</span>'}</td>
       <td class="num">${r.weeklyCash ? `<span class="money-pos">${money(r.weeklyCash)}</span>` : '<span class="money-zero">&mdash;</span>'}</td>
       <td class="num">${r.earnedTotal ? `<span class="money-pos">${money(r.earnedTotal)}</span>` : '<span class="money-zero">&mdash;</span>'}</td>
       <td class="num">${r.projectedTotal ? `<span style="color:var(--sheet-dim);font-weight:700">${money(r.projectedTotal)}</span>` : '<span class="money-zero">&mdash;</span>'}</td>
-      <td class="num fpts">${money(r.total)}</td>
+      <td class="num" style="font-weight:800">${money(r.total)}</td>
       <td class="num hide-sm"><span class="money-neg">${money(-r.buyIn)}</span>${r.paid ? '' : ' <span class="pill pill-miss">unpaid</span>'}</td>
       <td class="num hide-sm">${r.fines ? `<span class="money-neg">${money(-r.fines)}</span>` : '<span class="money-zero">&mdash;</span>'}</td>
-      <td class="num">${moneyCell(r.net)}</td>
+      <td class="num fpts">${moneyCell(r.net)}</td>
     </tr>`).join('')}</tbody></table>`, true),
   }));
 
@@ -473,20 +543,22 @@ function pageMoney() {
     </div>`,
   }));
 
-  return layout({ title: 'Money', page: 'money.html', league, state, body: body.join('\n') });
+  return layout({ title: 'Money', page: 'money.html', league, state, band, body: body.join('\n') });
 }
 const ord = n => ['', '1st', '2nd', '3rd', '4th', '5th'][n] || `${n}th`;
 
 /* --------------------------------------------------------- page: players */
 function pagePlayers() {
-  const body = [hero({
+  const band = hero({
     title: 'Players',
+    eyebrow: 'From the %Drafted and FPTS columns',
     sub: 'Ownership, leverage and chalk, pulled from the columns the spreadsheet threw away.',
-  })];
+  });
+  const body = [];
 
   if (!seasonDfs) {
     body.push(panel({ body: empty('No player data yet') }));
-    return layout({ title: 'Players', page: 'players.html', league, state, body: body.join('\n') });
+    return layout({ title: 'Players', page: 'players.html', league, state, band, body: body.join('\n') });
   }
 
   const allLev = perWeek.flatMap(a => a.leverage.map(p => ({ ...p, week: a.week })))
@@ -533,8 +605,8 @@ function pagePlayers() {
     head: whoami(league.members),
     body: sheet(`<table class="dt"><thead><tr><th>#</th><th>Team</th><th class="num">Chalk</th><th>Most Started</th></tr></thead>
     <tbody>${seasonDfs.managers.map((m, i) => `<tr data-team="${esc(m.username)}">
-      <td class="rk">${i + 1}</td>
-      <td class="who">${esc(m.username)}${m.name && m.name !== m.username ? `<small>${esc(m.name)}</small>` : ''}</td>
+      <td class="rk">${rankChip(i + 1)}</td>
+      <td>${teamCell(m.username, m.name)}</td>
       <td class="num fpts">${(m.chalkiness * 100).toFixed(1)}%</td>
       <td>${m.favorite ? `${esc(m.favorite[0])} <span style="color:var(--sheet-dim)">&times;${m.favorite[1]}</span>` : '&mdash;'}</td>
     </tr>`).join('')}</tbody></table>`, true),
@@ -544,11 +616,11 @@ function pagePlayers() {
     title: 'Solo Starts of the Season', note: 'nobody else had him', flush: true,
     body: sheet(`<table class="dt"><thead><tr><th>Wk</th><th>Player</th><th>Manager</th><th class="num">FPTS</th></tr></thead>
     <tbody>${allUnique.map(p => `<tr data-team="${esc(p.username)}"><td class="rk"><a href="${wkFile(p.week)}" style="color:inherit">${p.week}</a></td>
-      <td class="who">${esc(p.player)}</td><td>${esc(p.username)}</td>
+      <td class="who">${esc(p.player)}</td><td>${teamCell(p.username, '')}</td>
       <td class="num fpts">${num(p.fpts)} ${perfMark(p.fpts, 25)}</td></tr>`).join('')}</tbody></table>`, true),
   }));
 
-  return layout({ title: 'Players', page: 'players.html', league, state, body: body.join('\n') });
+  return layout({ title: 'Players', page: 'players.html', league, state, band, body: body.join('\n') });
 }
 
 /* -------------------------------------------------------------- emit */
