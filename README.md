@@ -137,9 +137,15 @@ Everyone is **Cc'd**, not Bcc'd, so Reply All reaches the whole league and the t
 
 ```bash
 gh secret set GMAIL_APP_PASSWORD
-gh secret set GMAIL_USER --body "kylebahr88@gmail.com"
+gh secret set GMAIL_USER --body "kylebahrautomation@gmail.com"
 gh variable set SITE_URL --body "https://kylebahr.github.io/church-league"
 ```
+
+`GMAIL_USER` must be the account the app password was generated on. Mail is sent
+from that account and `Reply-To` points at `commissioner.email` in
+`data/league.json`, so replies reach a real inbox rather than the automation one.
+The sending account is excluded from the recipient list; every other address in
+`LEAGUE_EMAILS` is Cc'd, including the commissioner's own.
 
 3. Addresses live in `data/emails.json` (gitignored) and the `LEAGUE_EMAILS` secret, never in git.
 

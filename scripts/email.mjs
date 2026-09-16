@@ -324,14 +324,21 @@ function resolveRecipients() {
 
 const only = val('to');
 const resolved = resolveRecipients();
+// The SMTP account is the sender, not a league member. Everyone else on the
+// list is a recipient - including the commissioner, whose personal address is
+// NOT the sending address when a separate automation account does the sending.
+const senderAddr = (process.env.GMAIL_USER || '').trim().toLowerCase();
 const recipients = only
   ? [only]
-  : resolved.list.filter(e => e !== league.commissioner.email.toLowerCase());
+  : resolved.list.filter(e => e !== senderAddr);
 
 console.log(`kind      : ${kind}`);
 console.log(`subject   : ${subject}`);
 console.log(`preview   : ${path.relative(ROOT, preview)}`);
 console.log(`recipients: ${recipients.length}${only ? ' (--to override)' : ` from ${resolved.src}`}`);
+if (!only && process.env.GMAIL_USER) {
+  console.log(`sending as: ${senderAddr}  (replies -> ${league.commissioner.email})`);
+}
 
 if (DRY) { console.log('\nDRY RUN - nothing sent.'); process.exit(0); }
 
@@ -347,10 +354,11 @@ if (!recipients.length) {
 
 // Everyone is Cc'd on purpose: these are 17 guys who all know each other, and
 // a visible Cc list means Reply All reaches the whole league. Not Bcc.
+// Replies go to the commissioner's real inbox, not the automation account.
 const res = await sendMail({
   user, pass,
-  from: `${league.commissioner.name} <${user}>`,
-  to: [user], cc: recipients,
+  from: `${league.leagueName} (${league.commissioner.name}) <${user}>`,
+  ...(only ? { to: [only] } : { to: [user], cc: recipients }),
   replyTo: league.commissioner.email,
   subject, html,
 });
