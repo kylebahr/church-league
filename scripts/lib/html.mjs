@@ -61,8 +61,7 @@ ${extraHead}
 ${body}
 </main>
 <footer class="ft"><div class="wrap">
-  <p>${esc(league.leagueName)} &middot; ${esc(league.seasonLabel)} &middot; rotisserie scoring, ${state.league.members.length} teams, ${money(state.payouts.poolTotal)} pool.
-  Commissioner: ${esc(league.commissioner.name)} (<a href="mailto:${esc(league.commissioner.email)}">${esc(league.commissioner.email)}</a>).</p>
+  <p>${esc(league.leagueName)} &middot; ${esc(league.seasonLabel)} &middot; rotisserie scoring, ${state.league.members.length} teams, ${money(state.payouts.poolTotal)} pool.</p>
   <p>Built from the DraftKings contest exports. Last updated <span data-utc="${state.generatedAt}">${new Date(state.generatedAt).toUTCString()}</span>.
   Scoring verified bit-identical to the retired league spreadsheet.</p>
 </div></footer>
