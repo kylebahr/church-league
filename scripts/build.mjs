@@ -58,7 +58,9 @@ function banners() {
   if (emailCount < league.members.length) setup.push(`Only ${emailCount} of ${league.members.length} email addresses are on file &mdash; add the rest to <code>data/emails.json</code> (gitignored) and the <code>LEAGUE_EMAILS</code> secret.`);
   if (!league.members.some(m => m.paid)) setup.push(`Nobody is marked <code>"paid": true</code> yet, so the pool shows ${money(payouts.poolTotal)} outstanding.`);
   if (setup.length) {
-    out += `<div class="callout"><h3>Commissioner setup &mdash; only you see this as a to-do</h3><ul>${setup.map(s => `<li>${s}</li>`).join('')}</ul></div>`;
+    // NB: this site is public. Never word this as if only the commissioner sees it.
+    out += `<div class="callout"><h3>Setup still pending</h3><ul>${setup.map(s => `<li>${s}</li>`).join('')}</ul>
+      <p style="margin:9px 0 0;color:var(--text-dim);font-size:12.5px">${esc(league.commissioner.name)} is on it.</p></div>`;
   }
   if (state.warnings.length) {
     out += `<div class="callout warn"><h3>Needs a ruling</h3><ul>${state.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
