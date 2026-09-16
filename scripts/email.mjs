@@ -106,9 +106,8 @@ const shell = (title, inner) => `<!DOCTYPE html>
   </td></tr>
   ${inner}
   <tr><td style="padding:22px 2px 8px;border-top:1px solid #d4dade;color:${C.pageDim};font-size:11px;line-height:1.6">
-    ${esc(league.leagueName)} &middot; ${league.members.length} teams &middot; ${money(payouts.poolTotal)} pool.
-    Commissioner ${esc(league.commissioner.name)}.<br>
-    Sent automatically when the standings update. Reply to this email to yell at ${esc(league.commissioner.name.split(' ')[0])}.
+    ${esc(league.leagueName)} &middot; ${league.members.length} teams &middot; ${money(payouts.poolTotal)} pool.<br>
+    Sent automatically when the standings update. Reply to this email and the whole league sees it.
   </td></tr>
 </table>
 </td></tr></table>
