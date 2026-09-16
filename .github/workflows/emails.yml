@@ -20,6 +20,10 @@ on:
         description: Dry run (build the email, send nothing)
         type: boolean
         default: true
+      to:
+        description: "Send to this ONE address only (leave blank to send to the league). Use this to test a real send without mailing 17 people."
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -39,6 +43,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "kind=${{ inputs.kind }}" >> "$GITHUB_OUTPUT"
             echo "dry=${{ inputs.dry }}"   >> "$GITHUB_OUTPUT"
+            echo "to=${{ inputs.to }}"     >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "0 14 * * 2" ]; then
             echo "kind=standings" >> "$GITHUB_OUTPUT"
             echo "dry=false"      >> "$GITHUB_OUTPUT"
@@ -62,8 +67,17 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           SITE_URL: ${{ vars.SITE_URL }}
         run: |
-          node scripts/email.mjs "${{ steps.pick.outputs.kind }}" --once \
-            ${{ steps.pick.outputs.dry == 'true' && '--dry' || '' }}
+          ARGS=""
+          if [ -n "${{ steps.pick.outputs.to }}" ]; then
+            # A single-recipient test send. --once is deliberately omitted so a
+            # test cannot mark the real email as already sent.
+            ARGS="--to ${{ steps.pick.outputs.to }}"
+          else
+            ARGS="--once"
+          fi
+          if [ "${{ steps.pick.outputs.dry }}" = "true" ]; then ARGS="$ARGS --dry"; fi
+          echo "running: email.mjs ${{ steps.pick.outputs.kind }} $ARGS"
+          node scripts/email.mjs "${{ steps.pick.outputs.kind }}" $ARGS
 
       - name: Remember what was sent
         if: steps.guard.outputs.weeks != '0'
