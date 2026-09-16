@@ -6,6 +6,7 @@
 //   node scripts/email.mjs reminder             # lineups lock soon, get in
 //   node scripts/email.mjs standings --dry      # write the HTML, send nothing
 //   node scripts/email.mjs standings --to me@x  # send only to one address
+//   node scripts/email.mjs reminder --slot thu-pm  # slot tunes the urgency
 //
 // Writes a preview to out/email-<kind>.html on every run, including real sends.
 // SENDS NOTHING unless GMAIL_USER and GMAIL_APP_PASSWORD are present in the
@@ -29,6 +30,7 @@ const kind = argv.find(a => !a.startsWith('-')) || 'standings';
 const flag = n => argv.includes(`--${n}`);
 const val = n => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : null; };
 const DRY = flag('dry');
+const slot = val('slot') || 'manual';
 
 if (!['launch', 'standings', 'reminder'].includes(kind)) {
   console.error(`Unknown email kind "${kind}". Use "launch", "standings" or "reminder".`);
@@ -230,16 +232,30 @@ function standingsEmail() {
 }
 
 /* --------------------------------------------------------------- reminder */
+const LOCK = league.schedule.lockTime || 'the first kickoff';
+const URGENCY = {
+  'wed-pm': { tag: 'Lineups lock tomorrow', lede: `Get your Week {W} lineup in`,
+              line: `Lineups lock at <b>${LOCK}</b> &mdash; tomorrow. Do it now and forget about it.` },
+  'thu-am': { tag: 'Lineups lock tonight', lede: `Week {W} locks tonight`,
+              line: `Lineups lock at <b>${LOCK}</b>, tonight. This is your working-hours reminder.` },
+  'thu-pm': { tag: 'Last call', lede: `Last call on Week {W}`,
+              line: `Lineups lock at <b>${LOCK}</b> &mdash; roughly two hours from now. After that the contest will not take an entry, full stop.` },
+  manual:   { tag: 'Lineups lock soon', lede: `Get your Week {W} lineup in`,
+              line: `Lineups lock at <b>${LOCK}</b>.` },
+};
+
 function reminderEmail() {
   if (!nextWeek) throw new Error('Season is complete, so there is no contest to remind anyone about.');
+  const u = URGENCY[slot] || URGENCY.manual;
   const cutN = league.schedule.playoffTeams;
   const bubble = state.standings[cutN - 1];
   const inner = [
     card(`
-      <div style="color:${C.orange};font-size:11px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase">Lineups lock soon</div>
-      <div style="color:${C.text};font-size:26px;font-weight:bold;line-height:1.15;margin:8px 0 10px">Get your Week ${nextWeek} lineup in</div>
+      <div style="color:${C.orange};font-size:11px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase">${esc(u.tag)}</div>
+      <div style="color:${C.text};font-size:26px;font-weight:bold;line-height:1.15;margin:8px 0 10px">${u.lede.replace('{W}', nextWeek)}</div>
       <div style="color:#d7dce1;font-size:14px;line-height:1.6;margin-bottom:16px">
-        You cannot submit after the first kickoff, even if none of your players are in that game.
+        ${u.line}
+        You cannot submit after that, even if none of your players are in the opening game.
         Miss it and you take the league's lowest score for the week &mdash; or ${money(league.penalty.subsequentFine)} out of pocket
         if it is not your first offense.
         ${haveSpecificLink ? '' : `<br><br><span style="color:${C.dim};font-size:12.5px">This links to the league page; the Week ${nextWeek} contest is at the top.</span>`}
@@ -257,8 +273,14 @@ function reminderEmail() {
     `) : '',
   ].join('');
 
+  const subjects = {
+    'wed-pm': `Week ${nextWeek} is open - lineups lock ${LOCK}`,
+    'thu-am': `Week ${nextWeek} lineups lock tonight`,
+    'thu-pm': `Last call: Week ${nextWeek} locks in about two hours`,
+    manual: `Week ${nextWeek} lineups lock soon - get in`,
+  };
   return {
-    subject: `Week ${nextWeek} lineups lock soon - get in`,
+    subject: subjects[slot] || subjects.manual,
     html: shell(`Week ${nextWeek} reminder`, inner),
   };
 }
@@ -287,7 +309,10 @@ const logKey = kind === 'launch'
   ? `launch:${league.season}`
   : kind === 'standings'
     ? `standings:${league.season}:${lastWeek ? lastWeek.week : '?'}`
-    : `reminder:${league.season}:${nextWeek}:${today}`;
+    // Keyed by SLOT, not by date: there are three reminder sends a week and two
+    // of them (Thursday morning and Thursday evening) share a UTC date, so a
+    // date key would drop the second as a duplicate.
+    : `reminder:${league.season}:${nextWeek}:${slot}`;
 const readLog = () => {
   try { return JSON.parse(fs.readFileSync(LOG_PATH, 'utf8')); } catch { return {}; }
 };

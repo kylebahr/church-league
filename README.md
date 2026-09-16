@@ -120,12 +120,35 @@ the build will tell you if the math stops closing.
 
 ## Emails
 
-Three emails, sent from your Gmail by GitHub Actions:
+Sent from your Gmail by GitHub Actions. **Lineups lock Thursday 7:15 PM CT**, and every
+reminder sits safely ahead of that.
 
-- **`launch`** — one-time announcement that the site exists, with the rescaled payout table
+| When | Email | Central now (CDT) | After 1 Nov (CST) |
+|---|---|---|---|
+| **on ingest** | `standings` — results, recap, next contest | whenever you run `./ingest.sh` | same |
+| Tue 14:00 UTC | `standings` *backstop only* | Tue 9:00 AM | Tue 8:00 AM |
+| Wed 22:00 UTC | `reminder` — locks tomorrow | Wed 5:00 PM | Wed 4:00 PM |
+| Thu 14:00 UTC | `reminder` — locks tonight | Thu 9:00 AM | Thu 8:00 AM |
+| Thu 22:00 UTC | `reminder` — last call, ~2h out | Thu 5:00 PM | Thu 4:00 PM |
 
-- **Tuesday 9am CT** — results are live, standings, recap, link to next contest
-- **Wednesday 4pm CT and Thursday 8am CT** — lineups lock tonight, get in
+Plus `launch`, a one-time announcement that the site exists, carrying the rescaled payout table.
+
+**Cron is UTC and has no concept of daylight saving**, so the Central times above shift an hour
+earlier when DST ends on 1 November 2026 — around Week 9. Every send stays hours ahead of lock
+either way, so this is left alone rather than papered over with duplicate crons.
+
+**The standings email is event-driven, not scheduled.** It goes out when a week's CSV is
+ingested, whatever time of day that is, because a morning-only cron would silently miss an
+afternoon ingest — the cron would have already run and would not fire again for a week. The
+Tuesday cron remains as a backstop for a Monday-night ingest. `--once` stops the two doubling up.
+
+Reminder de-duplication is keyed by **slot** (`wed-pm`, `thu-am`, `thu-pm`), not by date, because
+two of the three reminders share a UTC date. The slot also sets the urgency: "locks tomorrow",
+"locks tonight", "last call".
+
+`lockTime` lives in `data/league.json`. Irregular weeks exist — Week 1 opened Wednesday,
+Thanksgiving and Christmas shift, and Week 18 has no Thursday game — so change it if a week
+differs.
 
 Everyone is **Cc'd**, not Bcc'd, so Reply All reaches the whole league and the trash talk stays public. This does mean all 17 addresses are visible to all 17 members, which is the intent.
 
@@ -150,15 +173,15 @@ The sending account is excluded from the recipient list; every other address in
 3. Addresses live in `data/emails.json` (gitignored) and the `LEAGUE_EMAILS` secret, never in git.
 
 Nothing sends until both secrets exist, so a half-finished setup is a no-op rather than a mistake.
-`--once` keys every send to `kind:season:week` in `data/email-log.json`, so a cron cannot send
-Tuesday's results twice.
+`--once` records every send in `data/email-log.json`, so nothing sends twice: `launch` once per
+season, `standings` once per week, and each `reminder` once per slot per week.
 
 ### Test before trusting it
 
 ```bash
 node scripts/email.mjs launch    --dry                    # writes out/email-launch.html
 node scripts/email.mjs standings --dry
-node scripts/email.mjs reminder  --dry
+node scripts/email.mjs reminder  --dry --slot thu-pm      # slot tunes the urgency
 node scripts/email.mjs standings --to you@example.com     # real send, only to you
 ```
 

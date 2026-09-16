@@ -23,7 +23,9 @@
     ],
     "playoffTeams": 7,
     "toiletBowlTeams": 10,
-    "_comment": "playoffTeams derived from 14/32 NFL playoff rate (43.75%) x 17 teams = 7.44 -> 7"
+    "_comment": "playoffTeams derived from 14/32 NFL playoff rate (43.75%) x 17 teams = 7.44 -> 7",
+    "lockTime": "Thursday 7:15 PM CT",
+    "_lockNote": "First kickoff of the week. Irregular weeks exist: Week 1 opened Wednesday, Thanksgiving and Christmas weeks shift, and Week 18 has no Thursday game. Update lockTime if a week differs."
   },
   "penalty": {
     "firstOffense": "free_late_lineup",

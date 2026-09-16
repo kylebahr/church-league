@@ -1,13 +1,22 @@
 name: League emails
 
-# Times are UTC because cron does not understand daylight saving.
+# Times are UTC because cron does not understand daylight saving, so the
+# Central times below shift by an hour when DST ends (1 Nov 2026, ~Week 9).
 #   14:00 UTC = 9am CDT / 8am CST
 #   22:00 UTC = 5pm CDT / 4pm CST
+#
+# Lineups lock Thursday 7:15 PM CT, so every reminder sits safely ahead of it:
+# the latest (Thu 22:00 UTC) is 2h15m before lock in summer, 3h15m in winter.
+#
+# The Tuesday standings cron is only a BACKSTOP. The standings email is
+# normally sent by deploy.yml the moment a week's CSV is ingested, whatever
+# time that happens - see that workflow. --once keeps the two from doubling up.
 on:
   schedule:
-    - cron: '0 14 * * 2'   # Tuesday morning  - results are live
-    - cron: '0 14 * * 4'   # Thursday morning - lineups lock tonight
-    - cron: '0 22 * * 3'   # Wednesday late   - last call before Thursday
+    - cron: '0 14 * * 2'   # Tue  9am CDT - results backstop
+    - cron: '0 22 * * 3'   # Wed  5pm CDT - reminder 1, lock is tomorrow
+    - cron: '0 14 * * 4'   # Thu  9am CDT - reminder 2, lock is tonight
+    - cron: '0 22 * * 4'   # Thu  5pm CDT - reminder 3, last call ~2h out
   workflow_dispatch:
     inputs:
       kind:
@@ -44,12 +53,20 @@ jobs:
             echo "kind=${{ inputs.kind }}" >> "$GITHUB_OUTPUT"
             echo "dry=${{ inputs.dry }}"   >> "$GITHUB_OUTPUT"
             echo "to=${{ inputs.to }}"     >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event.schedule }}" = "0 14 * * 2" ]; then
-            echo "kind=standings" >> "$GITHUB_OUTPUT"
-            echo "dry=false"      >> "$GITHUB_OUTPUT"
           else
-            echo "kind=reminder"  >> "$GITHUB_OUTPUT"
-            echo "dry=false"      >> "$GITHUB_OUTPUT"
+            echo "dry=false" >> "$GITHUB_OUTPUT"
+            case "${{ github.event.schedule }}" in
+              "0 14 * * 2") echo "kind=standings" >> "$GITHUB_OUTPUT"
+                            echo "slot=tue-am"    >> "$GITHUB_OUTPUT" ;;
+              "0 22 * * 3") echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+                            echo "slot=wed-pm"    >> "$GITHUB_OUTPUT" ;;
+              "0 14 * * 4") echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+                            echo "slot=thu-am"    >> "$GITHUB_OUTPUT" ;;
+              "0 22 * * 4") echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+                            echo "slot=thu-pm"    >> "$GITHUB_OUTPUT" ;;
+              *)            echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+                            echo "slot=manual"    >> "$GITHUB_OUTPUT" ;;
+            esac
           fi
 
       # Off-season guard: no ingested weeks means no email, ever.
@@ -76,6 +93,9 @@ jobs:
           else
             ARGS="--once"
           fi
+          if [ -n "${{ steps.pick.outputs.slot }}" ]; then
+            ARGS="$ARGS --slot ${{ steps.pick.outputs.slot }}"
+          fi
           if [ "${{ steps.pick.outputs.dry }}" = "true" ]; then ARGS="$ARGS --dry"; fi
           echo "running: email.mjs ${{ steps.pick.outputs.kind }} $ARGS"
           node scripts/email.mjs "${{ steps.pick.outputs.kind }}" $ARGS
@@ -87,7 +107,7 @@ jobs:
             git config user.name  "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add data/email-log.json
-            git commit -m "Log ${{ steps.pick.outputs.kind }} email"
+            git commit -m "Log ${{ steps.pick.outputs.kind }} email [skip ci]"
             git push
           fi
 

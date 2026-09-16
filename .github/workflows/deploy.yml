@@ -50,3 +50,63 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # Standings email is EVENT-DRIVEN, not scheduled: it goes out when a week's
+  # CSV actually lands, whatever time of day that is. A Tuesday-morning cron
+  # alone would miss an afternoon ingest entirely - the cron had already run
+  # and would not fire again for a week. That cron still exists in emails.yml
+  # as a backstop for a Monday-night ingest, and --once stops them doubling up.
+  #
+  # Runs after deploy so the site is already live when the link is clicked.
+  standings-email:
+    needs: deploy
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Did this push actually add or change a week?
+        id: changed
+        run: |
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            RANGE="HEAD~1 HEAD"
+          else
+            RANGE="$BEFORE ${{ github.sha }}"
+          fi
+          echo "comparing $RANGE"
+          if git diff --name-only $RANGE 2>/dev/null | grep -q '^data/weeks/'; then
+            echo "weeks=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "weeks=no" >> "$GITHUB_OUTPUT"
+            echo "No change under data/weeks/ - no standings email."
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.changed.outputs.weeks == 'yes'
+        with:
+          node-version: '22'
+
+      - name: Send the standings email
+        if: steps.changed.outputs.weeks == 'yes'
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          LEAGUE_EMAILS: ${{ secrets.LEAGUE_EMAILS }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: node scripts/email.mjs standings --once --slot ingest
+
+      - name: Remember what was sent
+        if: steps.changed.outputs.weeks == 'yes'
+        run: |
+          if ! git diff --quiet data/email-log.json; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/email-log.json
+            git commit -m "Log standings email [skip ci]"
+            git push
+          fi
