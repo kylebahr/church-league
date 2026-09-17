@@ -123,27 +123,35 @@ the build will tell you if the math stops closing.
 Sent from your Gmail by GitHub Actions. **Lineups lock Thursday 7:15 PM CT**, and every
 reminder sits safely ahead of that.
 
-| When | Email | Central now (CDT) | After 1 Nov (CST) |
+| Slot | Attempts (UTC) | Central now (CDT) | Purpose |
 |---|---|---|---|
-| **on ingest** | `standings` — results, recap, next contest | whenever you run `./ingest.sh` | same |
-| Tue 14:00 UTC | `standings` *backstop only* | Tue 9:00 AM | Tue 8:00 AM |
-| Wed 22:00 UTC | `reminder` — locks tomorrow | Wed 5:00 PM | Wed 4:00 PM |
-| Thu 14:00 UTC | `reminder` — locks tonight | Thu 9:00 AM | Thu 8:00 AM |
-| Thu 22:00 UTC | `reminder` — last call, ~2h out | Thu 5:00 PM | Thu 4:00 PM |
+| — | on ingest | whenever you run `./ingest.sh` | `standings` — results, recap, next contest |
+| `tue-am` | 13:00, 13:35 | 8:00, 8:35am | `standings` backstop only |
+| `wed-pm` | 21:30, 22:05, 22:40 | 4:30, 5:05, 5:40pm | `reminder` — lock is tomorrow |
+| `thu-am` | 13:00, 13:35, 14:10 | 8:00, 8:35, 9:10am | `reminder` — lock is tonight |
+| `thu-pm` | 20:30, 21:05, 21:40 | 3:30, 4:05, 4:40pm | `reminder` — last call |
 
-Each of those has a **retry 35 minutes later on the same slot**. GitHub's scheduler is best-effort:
-ticks run late under load and are sometimes dropped entirely — one was dropped on 2026-09-16
-because the workflow file had been edited four minutes beforehand. Because `--once` is keyed by
-slot, the retry is a no-op when the first run worked and a rescue when it did not.
+Plus `launch`, a one-time announcement that the site exists.
 
-**Editing `.github/workflows/emails.yml` shortly before a scheduled tick will probably cost you
-that tick.** Push workflow changes well clear of the times above.
+**Every send is scheduled early and attempted three times.** GitHub's scheduler is best-effort and
+was measured running **90+ minutes late** on this repo (a Wednesday retry fired 96 minutes behind;
+a Thursday morning pair never fired at all). Multiple attempts cover dropped ticks; starting early
+covers latency. `--once` is keyed by slot, so only the first attempt that actually runs sends
+anything — the others cost a few seconds and exit.
 
-Plus `launch`, a one-time announcement that the site exists, carrying the rescaled payout table.
+**The reminders read the clock, not the schedule.** `data/league.json` holds `lockTime`
+(`Thursday 7:15 PM CT`), and `scripts/lib/clock.mjs` resolves the next real lock instant,
+DST included. So a send that runs 105 minutes late says *"about 30 minutes from now"* rather than
+repeating a stale "roughly two hours", and a reminder **refuses to send at all** once lock has
+passed — telling 17 people to enter a closed contest is worse than silence.
+
+That guard cannot be a simple "is it past lock" test: `nextLock()` returns the *next* occurrence,
+so the instant lock passes it rolls forward a week and the number goes hugely positive. It keys off
+distance instead — every legitimate reminder is within 48 hours of its lock.
 
 **Cron is UTC and has no concept of daylight saving**, so the Central times above shift an hour
-earlier when DST ends on 1 November 2026 — around Week 9. Every send stays hours ahead of lock
-either way, so this is left alone rather than papered over with duplicate crons.
+earlier when DST ends on 1 November 2026, around Week 9. The lock-time arithmetic handles DST
+correctly regardless, so the copy stays accurate even as the send times drift.
 
 **The standings email is event-driven, not scheduled.** It goes out when a week's CSV is
 ingested, whatever time of day that is, because a morning-only cron would silently miss an

@@ -18,14 +18,27 @@ name: League emails
 # no-op when the first one worked and a rescue when it did not.
 on:
   schedule:
-    - cron: '0 14 * * 2'    # Tue  9:00am CDT - results backstop
-    - cron: '35 14 * * 2'   #      9:35am     - retry
-    - cron: '0 22 * * 3'    # Wed  5:00pm CDT - reminder 1, lock is tomorrow
-    - cron: '35 22 * * 3'   #      5:35pm     - retry
-    - cron: '0 14 * * 4'    # Thu  9:00am CDT - reminder 2, lock is tonight
-    - cron: '35 14 * * 4'   #      9:35am     - retry
-    - cron: '0 22 * * 4'    # Thu  5:00pm CDT - reminder 3, last call ~2h out
-    - cron: '35 22 * * 4'   #      5:35pm     - retry, still ~1h40m before lock
+    # Times are UTC. GitHub's scheduler is best-effort and has been observed
+    # running 90+ minutes late on this repo, so each send is scheduled EARLIER
+    # than its ideal delivery time and attempted three times ~35 min apart.
+    # Extra attempts cover dropped ticks; the early start covers latency.
+    # --once is keyed by slot, so only the first attempt that actually runs
+    # sends anything - the rest cost a few seconds and exit.
+    #
+    # Lineups lock Thu 7:15pm CT. Even the last thu-pm attempt plus 90 minutes
+    # of drift lands over an hour before that, and email.mjs refuses outright
+    # once lock has passed.
+    - cron: '0 13 * * 2'    # Tue  8:00am CDT  standings backstop
+    - cron: '35 13 * * 2'   #      8:35am
+    - cron: '30 21 * * 3'   # Wed  4:30pm CDT  reminder 1, lock tomorrow
+    - cron: '5 22 * * 3'    #      5:05pm
+    - cron: '40 22 * * 3'   #      5:40pm
+    - cron: '0 13 * * 4'    # Thu  8:00am CDT  reminder 2, lock tonight
+    - cron: '35 13 * * 4'   #      8:35am
+    - cron: '10 14 * * 4'   #      9:10am
+    - cron: '30 20 * * 4'   # Thu  3:30pm CDT  reminder 3, last call
+    - cron: '5 21 * * 4'    #      4:05pm
+    - cron: '40 21 * * 4'   #      4:40pm
   workflow_dispatch:
     inputs:
       kind:
@@ -73,16 +86,20 @@ jobs:
             echo "dry=false" >> "$GITHUB_OUTPUT"
             # Each pair maps to one slot, so the retry cannot double-send.
             case "${{ github.event.schedule }}" in
-              "0 14 * * 2"|"35 14 * * 2") echo "kind=standings" >> "$GITHUB_OUTPUT"
-                                          echo "slot=tue-am"    >> "$GITHUB_OUTPUT" ;;
-              "0 22 * * 3"|"35 22 * * 3") echo "kind=reminder"  >> "$GITHUB_OUTPUT"
-                                          echo "slot=wed-pm"    >> "$GITHUB_OUTPUT" ;;
-              "0 14 * * 4"|"35 14 * * 4") echo "kind=reminder"  >> "$GITHUB_OUTPUT"
-                                          echo "slot=thu-am"    >> "$GITHUB_OUTPUT" ;;
-              "0 22 * * 4"|"35 22 * * 4") echo "kind=reminder"  >> "$GITHUB_OUTPUT"
-                                          echo "slot=thu-pm"    >> "$GITHUB_OUTPUT" ;;
-              *)                          echo "kind=reminder"  >> "$GITHUB_OUTPUT"
-                                          echo "slot=manual"    >> "$GITHUB_OUTPUT" ;;
+              "0 13 * * 2"|"35 13 * * 2")
+                  echo "kind=standings" >> "$GITHUB_OUTPUT"
+                  echo "slot=tue-am"    >> "$GITHUB_OUTPUT" ;;
+              "30 21 * * 3"|"5 22 * * 3"|"40 22 * * 3")
+                  echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+                  echo "slot=wed-pm"    >> "$GITHUB_OUTPUT" ;;
+              "0 13 * * 4"|"35 13 * * 4"|"10 14 * * 4")
+                  echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+                  echo "slot=thu-am"    >> "$GITHUB_OUTPUT" ;;
+              "30 20 * * 4"|"5 21 * * 4"|"40 21 * * 4")
+                  echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+                  echo "slot=thu-pm"    >> "$GITHUB_OUTPUT" ;;
+              *)  echo "kind=reminder"  >> "$GITHUB_OUTPUT"
+                  echo "slot=manual"    >> "$GITHUB_OUTPUT" ;;
             esac
           fi
 

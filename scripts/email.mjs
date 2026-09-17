@@ -20,6 +20,7 @@ import { analyzeWeek } from './lib/dfs.mjs';
 import { buildRecap, recapHeadline } from './lib/recap.mjs';
 import { sendMail } from './lib/smtp.mjs';
 import { esc, money } from './lib/html.mjs';
+import { nextLock, untilPhrase } from './lib/clock.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const DATA = path.join(ROOT, 'data');
@@ -260,13 +261,19 @@ function standingsEmail() {
 
 /* --------------------------------------------------------------- reminder */
 const LOCK = league.schedule.lockTime || 'the first kickoff';
+// Ask the clock, not the scheduler. A cron that ran 90 minutes late must not
+// still claim "two hours from now", and must not fire at all once lineups are
+// locked - telling 17 people to enter a closed contest is worse than silence.
+const LOCK_AT = nextLock(league.schedule.lockTime);
+const MS_TO_LOCK = LOCK_AT ? LOCK_AT.getTime() - Date.now() : null;
+const UNTIL = MS_TO_LOCK === null ? null : untilPhrase(MS_TO_LOCK);
 const URGENCY = {
   'wed-pm': { tag: 'Lineups lock tomorrow', lede: `Get your Week {W} lineup in`,
               line: `Lineups lock at <b>${LOCK}</b> &mdash; tomorrow. Do it now and forget about it.` },
   'thu-am': { tag: 'Lineups lock tonight', lede: `Week {W} locks tonight`,
-              line: `Lineups lock at <b>${LOCK}</b>, tonight. This is your working-hours reminder.` },
+              line: `Lineups lock at <b>${LOCK}</b>, tonight${UNTIL ? ` &mdash; ${UNTIL} from now` : ''}. This is your working-hours reminder.` },
   'thu-pm': { tag: 'Last call', lede: `Last call on Week {W}`,
-              line: `Lineups lock at <b>${LOCK}</b> &mdash; roughly two hours from now. After that the contest will not take an entry, full stop.` },
+              line: `Lineups lock at <b>${LOCK}</b>${UNTIL ? ` &mdash; ${UNTIL} from now` : ''}. After that the contest will not take an entry, full stop.` },
   manual:   { tag: 'Lineups lock soon', lede: `Get your Week {W} lineup in`,
               line: `Lineups lock at <b>${LOCK}</b>.` },
 };
@@ -313,6 +320,25 @@ function reminderEmail() {
 }
 
 /* ------------------------------------------------------------------- send */
+// Never send a "go enter" nudge once the contest has locked.
+//
+// Note this cannot be a `<= 0` test: nextLock() returns the NEXT occurrence, so
+// the moment lock passes it rolls forward a week and the number goes hugely
+// positive. The real signal is distance - every legitimate reminder fires
+// within two days of its lock, so anything further out means this week's lock
+// has already gone by and the games are under way.
+const REMINDER_WINDOW_H = 48;
+if (kind === 'reminder' && MS_TO_LOCK !== null) {
+  const hrs = MS_TO_LOCK / 3600000;
+  if (hrs > REMINDER_WINDOW_H) {
+    console.log(
+      `Lineups for this week already locked (${league.schedule.lockTime}); the next lock is ` +
+      `${hrs.toFixed(1)}h out. Not sending a reminder to enter a contest nobody can enter.`
+    );
+    process.exit(0);
+  }
+}
+
 const { subject, html } = kind === 'launch' ? launchEmail()
   : kind === 'standings' ? standingsEmail() : reminderEmail();
 
@@ -387,6 +413,7 @@ const recipients = only
 console.log(`kind      : ${kind}`);
 console.log(`subject   : ${subject}`);
 console.log(`preview   : ${path.relative(ROOT, preview)}`);
+if (kind === 'reminder' && LOCK_AT) console.log(`lock      : ${LOCK_AT.toISOString()} (${UNTIL} away)`);
 console.log(`recipients: ${recipients.length}${only ? ' (--to override)' : ` from ${resolved.src}`}`);
 if (!only && process.env.GMAIL_USER) {
   console.log(`sending as: ${senderAddr}  (replies -> ${league.commissioner.email})`);
