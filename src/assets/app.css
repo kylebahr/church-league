@@ -235,7 +235,15 @@ a:hover { text-decoration: underline; }
 .panel:nth-of-type(2) { animation-delay: .06s; }
 .panel:nth-of-type(3) { animation-delay: .10s; }
 .panel:nth-of-type(n+4) { animation-delay: .14s; }
-@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+/* Opacity only - deliberately NOT transform.
+   A transformed element becomes a containing block for its positioned
+   descendants, which breaks `position: sticky` inside it. The standings table
+   has TWO sticky layers (the header row and the first column), and animating
+   their panel with translateY produced stale un-repainted rectangles in Chrome
+   - a black box over the table that cleared on the next scroll. Opacity creates
+   a stacking context but not a containing block, so the fade survives and the
+   artifact does not. */
+@keyframes rise { from { opacity: 0; } to { opacity: 1; } }
 
 .panel-head {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
