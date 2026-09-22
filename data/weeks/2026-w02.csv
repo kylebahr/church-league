@@ -1,0 +1,71 @@
+Rank,EntryId,EntryName,TimeRemaining,Points,Lineup,,Player,Roster Position,%Drafted,FPTS
+1,5256653611,MKE_AL,0,215.88,DST Browns  FLEX Kenneth Walker III QB Patrick Mahomes RB Bijan Robinson RB Aaron Jones Sr. TE Dalton Schultz WR CeeDee Lamb WR Garrett Wilson WR Davante Adams,,Kenneth Walker III,RB,52.94%,26.8
+2,5257754076,Annihilus,0,193.62,DST Broncos  FLEX Aaron Jones Sr. QB Josh Allen RB Jahmyr Gibbs RB Kenneth Walker III TE Dalton Schultz WR Davante Adams WR DJ Moore WR Matthew Golden,,Dalton Schultz,TE,47.06%,29
+3,5256649734,Zste2311,0,185.81999,DST Panthers  FLEX Kenneth Walker III QB Josh Allen RB Jahmyr Gibbs RB Aaron Jones Sr. TE Dalton Schultz WR Garrett Wilson WR DJ Moore WR Matthew Golden,,DJ Moore,WR,41.18%,-0.1
+4,5257161847,HaHa2108,0,185.27998,DST Jaguars  FLEX CeeDee Lamb QB Brock Purdy RB Derrick Henry RB Kenneth Walker III TE Dalton Schultz WR Amon-Ra St. Brown WR DJ Moore WR Caleb Douglas,,Aaron Jones Sr.,RB,35.29%,13.5
+5,5258994996,urfullofBS23,0,176.21999,DST Titans  FLEX David Njoku QB Josh Allen RB Christian McCaffrey RB Kenneth Walker III TE Dalton Schultz WR Amon-Ra St. Brown WR George Pickens WR DJ Moore,,Amon-Ra St. Brown,WR,29.41%,38.2
+6,5257088595,thom53,0,170.68001,DST Jaguars  FLEX Darren Waller QB Patrick Mahomes RB Jahmyr Gibbs RB James Cook III TE Michael Mayer WR Amon-Ra St. Brown WR George Pickens WR Garrett Wilson,,Jaguars ,DST,29.41%,3
+7,5256788892,landoflakes,0,151.08,DST Vikings  FLEX Aaron Jones Sr. QB Brock Purdy RB Ashton Jeanty RB Kenneth Walker III TE Tucker Kraft WR DeVonta Smith WR Garrett Wilson WR Jordan Addison,,Garrett Wilson,WR,29.41%,16.7
+8,5257586731,Marauder94,0,150.14,DST Titans  FLEX Matthew Golden QB Jayden Daniels RB Kenneth Walker III RB Bucky Irving TE Hunter Henry WR Ja'Marr Chase WR CeeDee Lamb WR Terry McLaurin,,Bijan Robinson,RB,29.41%,11.1
+9,5257987405,bill.reineking,0,140.6,DST Cardinals  FLEX Christian McCaffrey QB Jordan Love RB David Montgomery RB Aaron Jones Sr. TE Dalton Schultz WR CeeDee Lamb WR George Pickens WR Terry McLaurin,,CeeDee Lamb,WR,29.41%,38.3
+10,5257403083,askfarwell,0,137.76001,DST Saints  FLEX Caleb Douglas QB Dak Prescott RB Bijan Robinson RB Aaron Jones Sr. TE Colston Loveland WR Ja'Marr Chase WR CeeDee Lamb WR Antonio Williams,,Jahmyr Gibbs,RB,23.53%,23.3
+11,5257111750,Bobby_the_Butcher,0,135.56001,DST Patriots  FLEX Saquon Barkley QB Dak Prescott RB Bijan Robinson RB Aaron Jones Sr. TE Colston Loveland WR CeeDee Lamb WR Matthew Golden WR Roman Wilson,,Derrick Henry,RB,23.53%,17.7
+12,5257807822,Scheele,0,123.72,DST Giants  FLEX Kenneth Walker III QB Carson Wentz RB Bijan Robinson RB Derrick Henry TE Dalton Schultz WR Justin Jefferson WR Drake London WR Devaughn Vele,,Josh Allen,QB,17.65%,40.82
+13,5258235520,SaquenDeezNuts,0,122.46001,DST Giants  FLEX Matthew Golden QB Trevor Lawrence RB Derrick Henry RB Kenneth Walker III TE Jake Ferguson WR Ja'Marr Chase WR Emeka Egbuka WR DJ Moore,,Kenneth Walker III,FLEX,17.65%,26.8
+14,5257216016,bearsconner67,0,116.920006,DST Jaguars  FLEX Aaron Jones Sr. QB Carson Wentz RB Jahmyr Gibbs RB Bijan Robinson TE Dalton Schultz WR Christian Watson WR Garrett Wilson WR DJ Moore,,Matthew Golden,WR,17.65%,9.8
+15,5256525067,GreenWeezy,0,114.6,DST Jaguars  FLEX David Montgomery QB Jaxson Dart RB Kenneth Walker III RB Aaron Jones Sr. TE Mark Andrews WR Amon-Ra St. Brown WR Emeka Egbuka WR DK Metcalf,,Aaron Jones Sr.,FLEX,17.65%,13.5
+16,5256776874,Yolander,0,106.42,DST Chiefs  FLEX Xavier Hutchinson QB Caleb Williams RB Kenneth Walker III RB Javonte Williams TE Mark Andrews WR Amon-Ra St. Brown WR DJ Moore WR Luther Burden III,,George Pickens,WR,17.65%,10
+17,5257880890,SHEENING61,0,95.50001,DST Jaguars  FLEX Bijan Robinson QB Jaxson Dart RB Derrick Henry RB Kenneth Walker III TE Michael Mayer WR Christian Watson WR Jameson Williams WR Devaughn Vele,,Ja'Marr Chase,WR,17.65%,26.5
+,,,,,,,Jaxson Dart,QB,11.76%,0.8
+,,,,,,,Emeka Egbuka,WR,11.76%,10.3
+,,,,,,,Mark Andrews,TE,11.76%,10.9
+,,,,,,,Patrick Mahomes,QB,11.76%,31.98
+,,,,,,,Davante Adams,WR,11.76%,42.5
+,,,,,,,Brock Purdy,QB,11.76%,28.48
+,,,,,,,Michael Mayer,TE,11.76%,5.3
+,,,,,,,Dak Prescott,QB,11.76%,29.76
+,,,,,,,Colston Loveland,TE,11.76%,1.3
+,,,,,,,Carson Wentz,QB,11.76%,6.32
+,,,,,,,Christian Watson,WR,11.76%,14.1
+,,,,,,,Terry McLaurin,WR,11.76%,7
+,,,,,,,Matthew Golden,FLEX,11.76%,9.8
+,,,,,,,Titans ,DST,11.76%,7
+,,,,,,,Devaughn Vele,WR,11.76%,11.4
+,,,,,,,Giants ,DST,11.76%,4
+,,,,,,,David Montgomery,FLEX,5.88%,4.4
+,,,,,,,DK Metcalf,WR,5.88%,6.7
+,,,,,,,Panthers ,DST,5.88%,26
+,,,,,,,Browns ,DST,5.88%,6
+,,,,,,,Caleb Williams,QB,5.88%,8.72
+,,,,,,,Javonte Williams,RB,5.88%,8
+,,,,,,,Luther Burden III,WR,5.88%,6.2
+,,,,,,,Xavier Hutchinson,FLEX,5.88%,6.7
+,,,,,,,Chiefs ,DST,5.88%,1
+,,,,,,,Ashton Jeanty,RB,5.88%,10.3
+,,,,,,,DeVonta Smith,WR,5.88%,30.7
+,,,,,,,Jordan Addison,WR,5.88%,4.1
+,,,,,,,Tucker Kraft,TE,5.88%,3.5
+,,,,,,,Vikings ,DST,5.88%,17
+,,,,,,,James Cook III,RB,5.88%,23.9
+,,,,,,,Darren Waller,FLEX,5.88%,18.3
+,,,,,,,Saquon Barkley,FLEX,5.88%,3
+,,,,,,,Roman Wilson,WR,5.88%,7.8
+,,,,,,,Patriots ,DST,5.88%,21
+,,,,,,,CeeDee Lamb,FLEX,5.88%,38.3
+,,,,,,,Caleb Douglas,WR,5.88%,3.9
+,,,,,,,Antonio Williams,WR,5.88%,5.4
+,,,,,,,Saints ,DST,5.88%,8
+,,,,,,,Jayden Daniels,QB,5.88%,14.74
+,,,,,,,Bucky Irving,RB,5.88%,13
+,,,,,,,Hunter Henry,TE,5.88%,7
+,,,,,,,Broncos ,DST,5.88%,8
+,,,,,,,Justin Jefferson,WR,5.88%,8.5
+,,,,,,,Drake London,WR,5.88%,8.9
+,,,,,,,Bijan Robinson,FLEX,5.88%,11.1
+,,,,,,,Jameson Williams,WR,5.88%,5.3
+,,,,,,,Jordan Love,QB,5.88%,13.8
+,,,,,,,Christian McCaffrey,FLEX,5.88%,22.6
+,,,,,,,Cardinals ,DST,5.88%,2
+,,,,,,,Trevor Lawrence,QB,5.88%,7.16
+,,,,,,,Jake Ferguson,TE,5.88%,20.3
+,,,,,,,David Njoku,FLEX,5.88%,1.9
