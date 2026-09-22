@@ -14,7 +14,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-CSV=""; WEEK=""; LINK=""; PUSH=1; DRY=0; UNATTENDED=0
+CSV=""; WEEK=""; LINK=""; PUSH=1; DRY=0; UNATTENDED=0; NOEMAIL=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --week)       WEEK="$2"; shift 2 ;;
@@ -22,6 +22,7 @@ while [[ $# -gt 0 ]]; do
     --no-push)    PUSH=0; shift ;;
     --dry)        DRY=1; shift ;;
     --unattended) UNATTENDED=1; shift ;;
+    --no-email)   NOEMAIL=1; shift ;;
     -h|--help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*)        echo "unknown flag: $1" >&2; exit 1 ;;
     *)         CSV="$1"; shift ;;
@@ -135,19 +136,44 @@ if [[ ! -d .git ]]; then
   exit 0
 fi
 
-git add -A
+# Stage ONLY what an ingest legitimately changes. Not `git add -A`: the email
+# workflow owns data/email-log.json and commits it from CI, and sweeping a stale
+# local copy into this commit would overwrite the record of what has been sent
+# - which is the only thing stopping a reminder going out twice.
+git add "$DEST"
+[[ -n "$LINK" ]] && git add data/contests.json
 if git diff --cached --quiet; then
   echo "Nothing changed, so nothing to commit."
   exit 0
 fi
-git commit -q -m "Week $WEEK results
+SUFFIX=""; [[ $NOEMAIL -eq 1 ]] && SUFFIX=" [no-email]"
+git commit -q -m "Week $WEEK results$SUFFIX
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 echo "Committed week $WEEK"
 
 if [[ $PUSH -eq 1 ]]; then
   BRANCH=$(git rev-parse --abbrev-ref HEAD)
-  git push -q origin "$BRANCH"
+  # The email workflow commits its send log to main between ingests, so the
+  # remote is routinely ahead of this machine. Rebase onto it before pushing -
+  # a plain push is rejected every single week. Retry in case a log commit
+  # lands in the gap between the pull and the push.
+  pushed=0
+  for attempt in 1 2 3; do
+    if ! git pull --rebase -q origin "$BRANCH"; then
+      git rebase --abort 2>/dev/null || true
+      echo "Could not rebase onto origin/$BRANCH - resolve by hand; the week is committed locally." >&2
+      exit 5
+    fi
+    if git push -q origin "$BRANCH" 2>/dev/null; then pushed=1; break; fi
+    echo "Push rejected (attempt $attempt), remote moved - retrying."
+    sleep 2
+  done
+  if [[ $pushed -ne 1 ]]; then
+    echo "Push failed after 3 attempts. Week $WEEK is committed locally and the" >&2
+    echo "watcher will retry the push on its next run." >&2
+    exit 6
+  fi
   echo "Pushed. GitHub Actions is deploying - the site is live in about a minute."
 else
   echo "Skipped push (--no-push)."

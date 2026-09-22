@@ -25,6 +25,7 @@ LOCKDIR="/tmp/church-league-ingest.lock.d"
 mkdir -p "$(dirname "$LOG")"
 log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG"; }
 notify() {
+  [[ -n "${CL_NO_NOTIFY:-}" ]] && return 0   # set by tests, so they stay silent
   command -v osascript >/dev/null 2>&1 || return 0
   osascript -e "display notification \"$1\" with title \"Church League\"" >/dev/null 2>&1 || true
 }
@@ -44,6 +45,27 @@ fi
 trap 'rmdir "$LOCKDIR" 2>/dev/null || true' EXIT
 
 cd "$REPO" || exit 0
+
+# --- 0. finish any push a previous run could not complete -------------------
+# A failed push leaves a week committed here but not on GitHub. Nothing below
+# would ever notice, because step 3 sees the week's sha already in data/weeks/
+# and treats it as done. Left alone, one network blip strands a week forever
+# with no error anyone would see. So every run first checks for unpushed work.
+sync_unpushed() {
+  git fetch -q origin main 2>/dev/null || return 0
+  local ahead
+  ahead="$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)"
+  [[ "$ahead" -gt 0 ]] || return 0
+  log "found $ahead unpushed commit(s) - syncing"
+  if git pull --rebase -q origin main 2>>"$LOG" && git push -q origin main 2>>"$LOG"; then
+    log "OK: synced unpushed work to GitHub"
+    notify "A previously stuck ingest has been pushed. Site is deploying."
+  else
+    git rebase --abort 2>/dev/null || true
+    log "FAILED to sync unpushed work; will retry next run"
+  fi
+}
+sync_unpushed
 
 # --- 1. is there a candidate at all? ----------------------------------------
 CAND="$(ls -t "$WATCH"/contest-standings-*.csv 2>/dev/null | head -1)"
@@ -69,7 +91,12 @@ sha="$(shasum -a 256 "$CAND" | awk '{print $1}')"
 for f in data/weeks/*.csv; do
   [[ -e "$f" ]] || continue
   if [[ "$(shasum -a 256 "$f" | awk '{print $1}')" == "$sha" ]]; then
-    exit 0   # this exact export is already in the repo; nothing to say
+    # Already ingested. File it away so inbox/ only shows genuinely pending work.
+    if [[ "$(dirname "$CAND")" == "$WATCH" ]]; then
+      mkdir -p "$WATCH/processed" && mv "$CAND" "$WATCH/processed/" 2>/dev/null \
+        && log "filed duplicate of $(basename "$f"): $(basename "$CAND")"
+    fi
+    exit 0
   fi
 done
 
@@ -121,6 +148,8 @@ case $rc in
     notify "Week ${week:-?} ingested. Site is deploying and the league email is on its way."
     ;;
   3) log "skipped: week already ingested" ;;
+  6) log "committed locally but push failed; will retry next run"
+     notify "Week ingested but not yet pushed. Will retry automatically." ;;
   4) log "skipped: not this league's contest" ;;
   *)
     log "FAILED (exit $rc)"

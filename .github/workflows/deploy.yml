@@ -60,7 +60,10 @@ jobs:
   # Runs after deploy so the site is already live when the link is clicked.
   standings-email:
     needs: deploy
-    if: github.event_name == 'push'
+    # "[no-email]" in the pushed commit holds the league email back - used to
+    # publish a week and test the standings email on one address before the
+    # league sees it. (Our own token; GitHub gives it no special meaning.)
+    if: github.event_name == 'push' && !contains(github.event.head_commit.message, '[no-email]')
     runs-on: ubuntu-latest
     permissions:
       contents: write
