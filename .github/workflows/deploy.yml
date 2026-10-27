@@ -111,5 +111,12 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add data/email-log.json
             git commit -m "Log standings email [skip ci]"
-            git push
+            # Anything pushed to main while this job ran (an ingest, a fix) rejects
+            # a plain push, and a lost log line lets a backstop cron re-send.
+            for i in 1 2 3; do
+              git pull --rebase -q origin main && git push && exit 0
+              git rebase --abort 2>/dev/null || true
+              sleep 5
+            done
+            exit 1
           fi
