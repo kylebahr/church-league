@@ -165,8 +165,12 @@ if [[ $PUSH -eq 1 ]]; then
       echo "Could not rebase onto origin/$BRANCH - resolve by hand; the week is committed locally." >&2
       exit 5
     fi
-    if git push -q origin "$BRANCH" 2>/dev/null; then pushed=1; break; fi
-    echo "Push rejected (attempt $attempt), remote moved - retrying."
+    # Keep git's own message. Not every rejection is the remote moving -
+    # Week 7 sat stranded behind GH007 (private email) while this line
+    # reported "remote moved" three times.
+    if err="$(git push -q origin "$BRANCH" 2>&1)"; then pushed=1; break; fi
+    echo "Push rejected (attempt $attempt) - retrying. git said:"
+    printf '%s\n' "$err" | sed 's/^/    /'
     sleep 2
   done
   if [[ $pushed -ne 1 ]]; then
