@@ -1,0 +1,69 @@
+Rank,EntryId,EntryName,TimeRemaining,Points,Lineup,,Player,Roster Position,%Drafted,FPTS
+1,5324842386,thom53,0,154.39998,DST Broncos  FLEX Dalton Schultz QB Drew Lock RB Kenneth Walker III RB Jonah Coleman TE Greg Dulcich WR Jaxon Smith-Njigba WR Puka Nacua WR Rome Odunze,,Jonah Coleman,RB,56.25%,18.8
+2,5324462792,Zste2311,0,152.90001,DST Packers  FLEX Puka Nacua QB Drew Lock RB Jonah Coleman RB Devin Singletary TE George Kittle WR CeeDee Lamb WR Drake London WR Antonio Williams,,Drew Lock,QB,43.75%,12.6
+3,5325869442,HaHa2108,0,144.7,DST Packers  FLEX Quinshon Judkins QB Drew Lock RB Jonah Coleman RB Devin Singletary TE Greg Dulcich WR Jaxon Smith-Njigba WR Puka Nacua WR Matthew Golden,,Devin Singletary,RB,43.75%,5.9
+4,5324357827,GreenWeezy,0,143.38,DST Browns  FLEX Devin Singletary QB Patrick Mahomes RB Christian McCaffrey RB Jonah Coleman TE T.J. Hockenson WR Tee Higgins WR Matthew Golden WR Keenan Allen,,Puka Nacua,WR,37.50%,39
+5,5326052744,Annihilus,0,139.08,DST Giants  FLEX Devin Singletary QB Patrick Mahomes RB Christian McCaffrey RB Jonah Coleman TE Colston Loveland WR Ja'Marr Chase WR Drake London WR Antonio Williams,,Greg Dulcich,TE,37.50%,3.4
+6,5326055824,urfullofBS23,0,138.1,DST Saints  FLEX Michael Mayer QB Drew Lock RB Christian McCaffrey RB Devin Singletary TE Greg Dulcich WR Puka Nacua WR Ja'Marr Chase WR Malik Nabers,,Christian McCaffrey,RB,31.25%,22.7
+7,5325651337,Scheele,0,131.62,DST Packers  FLEX Bucky Irving QB Malik Willis RB Jahmyr Gibbs RB Rhamondre Stevenson TE Michael Mayer WR Tee Higgins WR DeMario Douglas WR Caleb Douglas,,Drake London,WR,31.25%,11.8
+8,5324928331,landoflakes,0,130.8,DST Eagles  FLEX Chuba Hubbard QB Drew Lock RB Chase Brown RB Jonah Coleman TE Eli Raridon WR CeeDee Lamb WR Justin Jefferson WR Drake London,,CeeDee Lamb,WR,25.00%,37.5
+9,5324710449,Yolander,0,127.799995,DST Giants  FLEX Colston Loveland QB Drew Lock RB Chuba Hubbard RB Quinshon Judkins TE Sam LaPorta WR Ja'Marr Chase WR Tee Higgins WR Drake London,,Malik Willis,QB,25.00%,4.82
+10,5324420842,SaquenDeezNuts,0,126.619995,DST Cardinals  FLEX Tee Higgins QB Malik Willis RB Javonte Williams RB Bucky Irving TE Darren Waller WR Chris Olave WR Jaylen Waddle WR Devaughn Vele,,Cardinals ,DST,25.00%,1
+11,5324369316,Marauder94,0,126.22001,DST Jets  FLEX Jonah Coleman QB Malik Willis RB Quinshon Judkins RB Devin Singletary TE Greg Dulcich WR Puka Nacua WR CeeDee Lamb WR Malik Nabers,,Jaxon Smith-Njigba,WR,25.00%,12.1
+12,5325268000,MKE_AL,0,122.98001,DST Cardinals  FLEX George Kittle QB Brock Purdy RB Christian McCaffrey RB Devin Singletary TE Brevyn Spann-Ford WR Puka Nacua WR Justin Jefferson WR Antonio Williams,,Ja'Marr Chase,WR,25.00%,34.5
+13,5326337332,bill.reineking,0,120.14001,DST Cardinals  FLEX Mike Gesicki QB Joe Burrow RB Jonah Coleman RB Devin Singletary TE Greg Dulcich WR Jaxon Smith-Njigba WR Ja'Marr Chase WR Drake London,,Devin Singletary,FLEX,18.75%,5.9
+14,5324328396,Bobby_the_Butcher,0,115.49999,DST Jaguars  FLEX Devin Singletary QB Drew Lock RB Jahmyr Gibbs RB Jonah Coleman TE Harold Fannin Jr. WR CeeDee Lamb WR Malik Washington WR Adonai Mitchell,,Tee Higgins,WR,18.75%,20.2
+15,5324493126,SHEENING61,0,103.48,DST Buccaneers  FLEX Ollie Gordon II QB J.J. McCarthy RB Chuba Hubbard RB Jonah Coleman TE Eli Raridon WR Jaxon Smith-Njigba WR Malik Nabers WR Denzel Boston,,Malik Nabers,WR,18.75%,9.3
+16,5324720714,askfarwell,0,102.22,DST Cardinals  FLEX Amon-Ra St. Brown QB Malik Willis RB Christian McCaffrey RB Devin Singletary TE Greg Dulcich WR Puka Nacua WR Justin Jefferson WR Chris Bell,,Antonio Williams,WR,18.75%,5.5
+,,,,,,,Packers ,DST,18.75%,12
+,,,,,,,Justin Jefferson,WR,18.75%,8.8
+,,,,,,,Jahmyr Gibbs,RB,12.50%,13.4
+,,,,,,,Patrick Mahomes,QB,12.50%,17.48
+,,,,,,,Matthew Golden,WR,12.50%,35.4
+,,,,,,,Quinshon Judkins,RB,12.50%,5.5
+,,,,,,,Chuba Hubbard,RB,12.50%,13.6
+,,,,,,,Eli Raridon,TE,12.50%,8.2
+,,,,,,,Giants ,DST,12.50%,13
+,,,,,,,Malik Washington,WR,6.25%,4.1
+,,,,,,,Adonai Mitchell,WR,6.25%,0
+,,,,,,,Harold Fannin Jr.,TE,6.25%,12.2
+,,,,,,,Jaguars ,DST,6.25%,11
+,,,,,,,Keenan Allen,WR,6.25%,6.6
+,,,,,,,T.J. Hockenson,TE,6.25%,7.3
+,,,,,,,Browns ,DST,6.25%,9
+,,,,,,,Jonah Coleman,FLEX,6.25%,18.8
+,,,,,,,Jets ,DST,6.25%,2
+,,,,,,,Javonte Williams,RB,6.25%,25.4
+,,,,,,,Bucky Irving,RB,6.25%,28.5
+,,,,,,,Chris Olave,WR,6.25%,16.8
+,,,,,,,Tee Higgins,FLEX,6.25%,20.2
+,,,,,,,Jaylen Waddle,WR,6.25%,3.2
+,,,,,,,Devaughn Vele,WR,6.25%,3.7
+,,,,,,,Darren Waller,TE,6.25%,23
+,,,,,,,Puka Nacua,FLEX,6.25%,39
+,,,,,,,George Kittle,TE,6.25%,9.8
+,,,,,,,J.J. McCarthy,QB,6.25%,7.28
+,,,,,,,Ollie Gordon II,FLEX,6.25%,7.4
+,,,,,,,Denzel Boston,WR,6.25%,15.8
+,,,,,,,Buccaneers ,DST,6.25%,11
+,,,,,,,Sam LaPorta,TE,6.25%,7.2
+,,,,,,,Colston Loveland,FLEX,6.25%,9.4
+,,,,,,,Amon-Ra St. Brown,FLEX,6.25%,16.6
+,,,,,,,Chris Bell,WR,6.25%,0
+,,,,,,,Kenneth Walker III,RB,6.25%,39.3
+,,,,,,,Rome Odunze,WR,6.25%,16
+,,,,,,,Dalton Schultz,FLEX,6.25%,6.2
+,,,,,,,Broncos ,DST,6.25%,7
+,,,,,,,Chase Brown,RB,6.25%,10.5
+,,,,,,,Chuba Hubbard,FLEX,6.25%,13.6
+,,,,,,,Eagles ,DST,6.25%,9
+,,,,,,,Brock Purdy,QB,6.25%,26.28
+,,,,,,,Brevyn Spann-Ford,TE,6.25%,4
+,,,,,,,Rhamondre Stevenson,RB,6.25%,15.8
+,,,,,,,DeMario Douglas,WR,6.25%,18.2
+,,,,,,,Caleb Douglas,WR,6.25%,13
+,,,,,,,Michael Mayer,TE,6.25%,5.7
+,,,,,,,Quinshon Judkins,FLEX,6.25%,5.5
+,,,,,,,Saints ,DST,6.25%,5
+,,,,,,,Joe Burrow,QB,6.25%,29.54
+,,,,,,,Mike Gesicki,FLEX,6.25%,3.1
